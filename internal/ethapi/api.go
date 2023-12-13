@@ -25,9 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ethereum/go-ethereum"
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -677,6 +676,19 @@ type StorageResult struct {
 	Proof []string     `json:"proof"`
 }
 
+type proofList [][]byte
+
+func (n *proofList) Put(key []byte, value []byte) error {
+	*n = append(*n, value)
+	return nil
+}
+
+func (n *proofList) Delete(key []byte) error {
+	panic("not supported")
+}
+
+var messagePasserContractAddressObj = common.HexToAddress("0x4200000000000000000000000000000000000016")
+
 // GetProof returns the Merkle-proof for a given account and optionally some storage keys.
 func (s *BlockChainAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*AccountResult, error) {
 	header, err := headerByNumberOrHash(ctx, s.b, blockNrOrHash)
@@ -693,6 +705,15 @@ func (s *BlockChainAPI) GetProof(ctx context.Context, address common.Address, st
 			return &res, nil
 		} else {
 			return nil, rpc.ErrNoHistoricalFallback
+		}
+	}
+	if address == messagePasserContractAddressObj {
+		result, err2 := getMessagePasserProof(s, header, storageKeys, address)
+		if err2 != nil {
+			return nil, err2
+		}
+		if result != nil {
+			return result, nil
 		}
 	}
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
@@ -747,6 +768,52 @@ func (s *BlockChainAPI) GetProof(ctx context.Context, address common.Address, st
 		StorageHash:  storageHash,
 		StorageProof: storageProof,
 	}, state.Error()
+}
+
+func getMessagePasserProof(s *BlockChainAPI, header *types.Header, storageKeys []string, address common.Address) (*AccountResult, error) {
+	stateAccount, trie, proof := s.b.GetMessagePasserDataInCache(header.Root)
+	if stateAccount != nil {
+		storageProof := make([]StorageResult, len(storageKeys))
+		for i, hexKey := range storageKeys {
+			key, err := decodeHash(hexKey)
+			if err != nil {
+				return nil, err
+			}
+			if trie != nil {
+				var proof proofList
+				err = trie.Prove(crypto.Keccak256(key.Bytes()), 0, &proof)
+				if err != nil {
+					return nil, err
+				}
+				enc, err := trie.TryGet(key.Bytes())
+				if err != nil {
+					return nil, err
+				}
+
+				var value common.Hash
+				if len(enc) > 0 {
+					_, content, _, err := rlp.Split(enc)
+					if err != nil {
+						return nil, err
+					}
+					value.SetBytes(content)
+				}
+				storageProof[i] = StorageResult{hexKey, (*hexutil.Big)(value.Big()), toHexSlice(proof)}
+			} else {
+				storageProof[i] = StorageResult{hexKey, &hexutil.Big{}, []string{}}
+			}
+		}
+		return &AccountResult{
+			Address:      address,
+			AccountProof: toHexSlice(proof),
+			Balance:      (*hexutil.Big)(stateAccount.Balance),
+			CodeHash:     common.BytesToHash(stateAccount.CodeHash),
+			Nonce:        hexutil.Uint64(stateAccount.Nonce),
+			StorageHash:  trie.Hash(),
+			StorageProof: nil,
+		}, nil
+	}
+	return nil, nil
 }
 
 // decodeHash parses a hex-encoded 32-byte hash. The input may optionally

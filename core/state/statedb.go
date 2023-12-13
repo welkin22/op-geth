@@ -1003,12 +1003,13 @@ func (s *StateDB) Commit(deleteEmptyObjects bool, postCommitFuncs ...func() erro
 		func() error {
 			// Commit objects to the trie, measuring the elapsed time
 			var (
-				accountTrieNodesUpdated int
-				accountTrieNodesDeleted int
-				storageTrieNodesUpdated int
-				storageTrieNodesDeleted int
-				nodes                   = trie.NewMergedNodeSet()
-				codeWriter              = s.db.DiskDB().NewBatch()
+				accountTrieNodesUpdated  int
+				accountTrieNodesDeleted  int
+				storageTrieNodesUpdated  int
+				storageTrieNodesDeleted  int
+				nodes                    = trie.NewMergedNodeSet()
+				codeWriter               = s.db.DiskDB().NewBatch()
+				messagePasserStateObject *types.StateAccount
 			)
 			for addr := range s.stateObjectsDirty {
 				if obj := s.stateObjects[addr]; !obj.deleted {
@@ -1030,6 +1031,9 @@ func (s *StateDB) Commit(deleteEmptyObjects bool, postCommitFuncs ...func() erro
 						updates, deleted := set.Size()
 						storageTrieNodesUpdated += updates
 						storageTrieNodesDeleted += deleted
+						if obj.address == messagePasserContractAddressObj {
+							messagePasserStateObject = &obj.data
+						}
 					}
 				}
 				// If the contract is destructed, the storage is still left in the
@@ -1096,6 +1100,15 @@ func (s *StateDB) Commit(deleteEmptyObjects bool, postCommitFuncs ...func() erro
 				}
 
 				s.db.CacheAccount(root, s.trie)
+				if messagePasserStateObject != nil {
+					s.db.CacheMessagePasserAccount(root, messagePasserStateObject)
+					proof, err := s.GetProof(messagePasserContractAddressObj)
+					if err != nil {
+						log.Warn("getProof for messagePasserContract fail when commit", "err", err)
+					} else {
+						s.db.CacheMessagePasserAccountProof(root, proof)
+					}
+				}
 			}
 			for _, postFunc := range postCommitFuncs {
 				err := postFunc()

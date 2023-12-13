@@ -42,12 +42,20 @@ const (
 	// Number of storage Trie in cache
 	storageTrieCacheSize = 2000
 
+	// Number of messagePasser contract cache
+	messagePasserCacheSize = 7200
+
 	// Purge interval
 	purgeInterval = 600 * time.Second
 
 	// Max size of account trie cache
 	maxAccountTrieSize = 1024 * 1024
+
+	// MessagePasser contract address
+	messagePasserContractAddress = "0x4200000000000000000000000000000000000016"
 )
+
+var messagePasserContractAddressObj = common.HexToAddress(messagePasserContractAddress)
 
 // Database wraps access to tries and contract code.
 type Database interface {
@@ -77,6 +85,24 @@ type Database interface {
 
 	// Cache the storage trie tree
 	CacheStorage(addrHash common.Hash, root common.Hash, t Trie)
+
+	// CacheMessagePasserStorage Cache the storage trie tree of Message Passer contract
+	CacheMessagePasserStorage(root common.Hash, t Trie)
+
+	// CacheMessagePasserAccount Cache the StateAccount of Message Passer contract
+	CacheMessagePasserAccount(root common.Hash, account *types.StateAccount)
+
+	// CacheMessagePasserAccountProof Cache the proof of Message Passer contract
+	CacheMessagePasserAccountProof(root common.Hash, proof [][]byte)
+
+	// GetCacheMessagePasserStorage Get the storage trie tree cache of Message Passer contract
+	GetCacheMessagePasserStorage(root common.Hash) Trie
+
+	// GetCacheMessagePasserAccount Get the StateAccount cache of Message Passer contract
+	GetCacheMessagePasserAccount(root common.Hash) *types.StateAccount
+
+	// GetCacheMessagePasserAccountProof Get the proof cache of Message Passer contract
+	GetCacheMessagePasserAccountProof(root common.Hash) [][]byte
 
 	// Purge cache
 	Purge()
@@ -159,10 +185,13 @@ func NewDatabase(db ethdb.Database) Database {
 // large memory cache.
 func NewDatabaseWithConfig(db ethdb.Database, config *trie.Config) Database {
 	return &cachingDB{
-		disk:          db,
-		codeSizeCache: lru.NewCache[common.Hash, int](codeSizeCacheSize),
-		codeCache:     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
-		triedb:        trie.NewDatabaseWithConfig(db, config),
+		disk:                          db,
+		codeSizeCache:                 lru.NewCache[common.Hash, int](codeSizeCacheSize),
+		codeCache:                     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
+		triedb:                        trie.NewDatabaseWithConfig(db, config),
+		messagePasserAccountCache:     lru.NewCache[common.Hash, *types.StateAccount](messagePasserCacheSize),
+		messagePasserAccountProof:     lru.NewCache[common.Hash, [][]byte](messagePasserCacheSize),
+		messagePasserStorageTrieCache: lru.NewCache[common.Hash, Trie](messagePasserCacheSize),
 	}
 }
 
@@ -171,11 +200,14 @@ func NewDatabaseWithConfig(db ethdb.Database, config *trie.Config) Database {
 // large memory cache.
 func NewDatabaseWithConfigAndCache(db ethdb.Database, config *trie.Config) Database {
 	database := &cachingDB{
-		disk:             db,
-		codeSizeCache:    lru.NewCache[common.Hash, int](codeSizeCacheSize),
-		codeCache:        lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
-		accountTrieCache: lru.NewCache[common.Hash, Trie](accountTrieCacheSize),
-		storageTrieCache: lru.NewCache[common.Hash, [3]*triePair](storageTrieCacheSize),
+		disk:                          db,
+		codeSizeCache:                 lru.NewCache[common.Hash, int](codeSizeCacheSize),
+		codeCache:                     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
+		accountTrieCache:              lru.NewCache[common.Hash, Trie](accountTrieCacheSize),
+		storageTrieCache:              lru.NewCache[common.Hash, [3]*triePair](storageTrieCacheSize),
+		messagePasserAccountCache:     lru.NewCache[common.Hash, *types.StateAccount](messagePasserCacheSize),
+		messagePasserAccountProof:     lru.NewCache[common.Hash, [][]byte](messagePasserCacheSize),
+		messagePasserStorageTrieCache: lru.NewCache[common.Hash, Trie](messagePasserCacheSize),
 	}
 	go database.purgeLoop()
 	return database
@@ -184,21 +216,27 @@ func NewDatabaseWithConfigAndCache(db ethdb.Database, config *trie.Config) Datab
 // NewDatabaseWithNodeDB creates a state database with an already initialized node database.
 func NewDatabaseWithNodeDB(db ethdb.Database, triedb *trie.Database) Database {
 	return &cachingDB{
-		disk:          db,
-		codeSizeCache: lru.NewCache[common.Hash, int](codeSizeCacheSize),
-		codeCache:     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
-		triedb:        triedb,
+		disk:                          db,
+		codeSizeCache:                 lru.NewCache[common.Hash, int](codeSizeCacheSize),
+		codeCache:                     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
+		triedb:                        triedb,
+		messagePasserAccountCache:     lru.NewCache[common.Hash, *types.StateAccount](messagePasserCacheSize),
+		messagePasserAccountProof:     lru.NewCache[common.Hash, [][]byte](messagePasserCacheSize),
+		messagePasserStorageTrieCache: lru.NewCache[common.Hash, Trie](messagePasserCacheSize),
 	}
 }
 
 func NewDatabaseWithNodeDBAndCache(db ethdb.Database, triedb *trie.Database) Database {
 	database := &cachingDB{
-		disk:             db,
-		codeSizeCache:    lru.NewCache[common.Hash, int](codeSizeCacheSize),
-		codeCache:        lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
-		triedb:           triedb,
-		accountTrieCache: lru.NewCache[common.Hash, Trie](accountTrieCacheSize),
-		storageTrieCache: lru.NewCache[common.Hash, [3]*triePair](storageTrieCacheSize),
+		disk:                          db,
+		codeSizeCache:                 lru.NewCache[common.Hash, int](codeSizeCacheSize),
+		codeCache:                     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
+		triedb:                        triedb,
+		accountTrieCache:              lru.NewCache[common.Hash, Trie](accountTrieCacheSize),
+		storageTrieCache:              lru.NewCache[common.Hash, [3]*triePair](storageTrieCacheSize),
+		messagePasserAccountCache:     lru.NewCache[common.Hash, *types.StateAccount](messagePasserCacheSize),
+		messagePasserAccountProof:     lru.NewCache[common.Hash, [][]byte](messagePasserCacheSize),
+		messagePasserStorageTrieCache: lru.NewCache[common.Hash, Trie](messagePasserCacheSize),
 	}
 	go database.purgeLoop()
 	return database
@@ -210,8 +248,11 @@ type cachingDB struct {
 	codeCache     *lru.SizeConstrainedCache[common.Hash, []byte]
 	triedb        *trie.Database
 
-	accountTrieCache *lru.Cache[common.Hash, Trie]
-	storageTrieCache *lru.Cache[common.Hash, [3]*triePair]
+	accountTrieCache              *lru.Cache[common.Hash, Trie]
+	storageTrieCache              *lru.Cache[common.Hash, [3]*triePair]
+	messagePasserStorageTrieCache *lru.Cache[common.Hash, Trie]
+	messagePasserAccountCache     *lru.Cache[common.Hash, *types.StateAccount]
+	messagePasserAccountProof     *lru.Cache[common.Hash, [][]byte]
 }
 
 type triePair struct {
@@ -348,6 +389,57 @@ func (db *cachingDB) CacheStorage(addrHash common.Hash, root common.Hash, t Trie
 
 	triesArray := [3]*triePair{{root: root, trie: tr.ResetCopy()}, nil, nil}
 	db.storageTrieCache.Add(addrHash, triesArray)
+}
+
+func (db *cachingDB) CacheMessagePasserStorage(root common.Hash, t Trie) {
+	if db.messagePasserStorageTrieCache == nil {
+		return
+	}
+	db.messagePasserStorageTrieCache.Add(root, t)
+}
+
+func (db *cachingDB) CacheMessagePasserAccount(root common.Hash, account *types.StateAccount) {
+	if db.messagePasserAccountCache == nil {
+		return
+	}
+	db.messagePasserAccountCache.Add(root, account)
+}
+
+func (db *cachingDB) CacheMessagePasserAccountProof(root common.Hash, proof [][]byte) {
+	if db.messagePasserAccountProof == nil {
+		return
+	}
+	db.messagePasserAccountProof.Add(root, proof)
+}
+
+func (db *cachingDB) GetCacheMessagePasserStorage(root common.Hash) Trie {
+	if db.messagePasserStorageTrieCache != nil {
+		value, ok := db.messagePasserStorageTrieCache.Get(root)
+		if ok {
+			return value
+		}
+	}
+	return nil
+}
+
+func (db *cachingDB) GetCacheMessagePasserAccount(root common.Hash) *types.StateAccount {
+	if db.messagePasserAccountCache != nil {
+		value, ok := db.messagePasserAccountCache.Get(root)
+		if ok {
+			return value
+		}
+	}
+	return nil
+}
+
+func (db *cachingDB) GetCacheMessagePasserAccountProof(root common.Hash) [][]byte {
+	if db.messagePasserAccountProof != nil {
+		value, ok := db.messagePasserAccountProof.Get(root)
+		if ok {
+			return value
+		}
+	}
+	return nil
 }
 
 // Purge removes the given trie from the cache.

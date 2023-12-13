@@ -103,6 +103,24 @@ func (db *odrDatabase) CacheAccount(_ common.Hash, _ state.Trie) {}
 
 func (db *odrDatabase) CacheStorage(_ common.Hash, _ common.Hash, _ state.Trie) {}
 
+func (db *odrDatabase) CacheMessagePasserStorage(root common.Hash, t state.Trie) {}
+
+func (db *odrDatabase) CacheMessagePasserAccount(root common.Hash, account *types.StateAccount) {}
+
+func (db *odrDatabase) CacheMessagePasserAccountProof(root common.Hash, proof [][]byte) {}
+
+func (db *odrDatabase) GetCacheMessagePasserStorage(root common.Hash) state.Trie {
+	return nil
+}
+
+func (db *odrDatabase) GetCacheMessagePasserAccount(root common.Hash) *types.StateAccount {
+	return nil
+}
+
+func (db *odrDatabase) GetCacheMessagePasserAccountProof(root common.Hash) [][]byte {
+	return nil
+}
+
 func (db *odrDatabase) Purge() {}
 
 type odrTrie struct {

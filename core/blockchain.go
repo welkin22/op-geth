@@ -2605,3 +2605,13 @@ func (bc *BlockChain) SetBlockValidatorAndProcessorForTesting(v Validator, p Pro
 func (bc *BlockChain) SetTrieFlushInterval(interval time.Duration) {
 	atomic.StoreInt64(&bc.flushInterval, int64(interval))
 }
+
+func (bc *BlockChain) GetMessagePasserDataInCache(root common.Hash) (*types.StateAccount, state.Trie, [][]byte) {
+	stateAccount := bc.stateCache.GetCacheMessagePasserAccount(root)
+	if stateAccount == nil {
+		return nil, nil, nil
+	}
+	storage := bc.stateCache.GetCacheMessagePasserStorage(stateAccount.Root)
+	proof := bc.stateCache.GetCacheMessagePasserAccountProof(root)
+	return stateAccount, storage, proof
+}

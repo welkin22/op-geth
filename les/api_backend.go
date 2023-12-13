@@ -341,3 +341,7 @@ func (b *LesApiBackend) HistoricalRPCService() *rpc.Client {
 func (b *LesApiBackend) Genesis() *types.Block {
 	return b.eth.blockchain.Genesis()
 }
+
+func (b *LesApiBackend) GetMessagePasserDataInCache(root common.Hash) (*types.StateAccount, state.Trie, [][]byte) {
+	return nil, nil, nil
+}

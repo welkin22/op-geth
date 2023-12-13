@@ -404,6 +404,9 @@ func (s *stateObject) commitTrie(db Database) (*trie.NodeSet, error) {
 	s.data.Root = root
 	if s.data.Root != types.EmptyRootHash {
 		db.CacheStorage(s.addrHash, s.data.Root, s.trie)
+		if s.address == messagePasserContractAddressObj {
+			db.CacheMessagePasserStorage(s.data.Root, s.trie)
+		}
 	}
 	return nodes, nil
 }

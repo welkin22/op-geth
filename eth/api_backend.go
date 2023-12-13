@@ -432,3 +432,7 @@ func (b *EthAPIBackend) HistoricalRPCService() *rpc.Client {
 func (b *EthAPIBackend) Genesis() *types.Block {
 	return b.eth.blockchain.Genesis()
 }
+
+func (b *EthAPIBackend) GetMessagePasserDataInCache(root common.Hash) (*types.StateAccount, state.Trie, [][]byte) {
+	return b.eth.blockchain.GetMessagePasserDataInCache(root)
+}
