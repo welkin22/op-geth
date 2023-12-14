@@ -708,6 +708,7 @@ func (s *BlockChainAPI) GetProof(ctx context.Context, address common.Address, st
 		}
 	}
 	if address == messagePasserContractAddressObj {
+		log.Info("getMessagePasserProof")
 		result, err2 := getMessagePasserProof(s, header, storageKeys, address)
 		if err2 != nil {
 			return nil, err2
