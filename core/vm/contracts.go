@@ -36,8 +36,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256r1"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -1265,17 +1263,17 @@ func (c *blsSignatureVerify) Run(input []byte) ([]byte, error) {
 	copy(msg[:], msgBytes)
 
 	signatureBytes := getData(input, msgHashLength, signatureLength)
-	sig, err := bls.SignatureFromBytes(signatureBytes)
+	sig, err := SignatureFromBytes(signatureBytes)
 	if err != nil {
 		log.Debug("blsSignatureVerify invalid signature", "err", err)
 		return nil, ErrExecutionReverted
 	}
 
 	pubKeyNumber := (inputLen - msgAndSigLength) / singleBlsPubkeyLength
-	pubKeys := make([]bls.PublicKey, pubKeyNumber)
+	pubKeys := make([]PublicKey, pubKeyNumber)
 	for i := uint64(0); i < pubKeyNumber; i++ {
 		pubKeyBytes := getData(input, msgAndSigLength+i*singleBlsPubkeyLength, singleBlsPubkeyLength)
-		pubKey, err := bls.PublicKeyFromBytes(pubKeyBytes)
+		pubKey, err := PublicKeyFromBytes(pubKeyBytes)
 		if err != nil {
 			log.Debug("blsSignatureVerify invalid pubKey", "err", err)
 			return nil, ErrExecutionReverted

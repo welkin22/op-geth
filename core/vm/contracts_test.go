@@ -18,6 +18,7 @@ package vm
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -440,6 +441,40 @@ func TestBlsSignatureVerify(t *testing.T) {
 	sig1 := privateKey1.Sign(msgHash[:])
 	sig2 := privateKey2.Sign(msgHash[:])
 	sig := bls.AggregateSignatures([]blscommon.Signature{sig1, sig2})
+
+	input := msgHash[:]
+	input = append(input, sig.Marshal()...)
+	input = append(input, privateKey1.PublicKey().Marshal()...)
+	input = append(input, privateKey2.PublicKey().Marshal()...)
+
+	inputStr := hex.EncodeToString(input)
+	t.Logf("input string: %s", inputStr)
+	input, err = hex.DecodeString(inputStr)
+	require.NoError(t, err)
+
+	contract := &blsSignatureVerify{}
+	res, err := contract.Run(input)
+	require.NoError(t, err)
+	require.Equal(t, big1.Bytes(), res)
+
+	input[0] += 1
+	res, err = contract.Run(input)
+	require.NoError(t, err)
+	require.Equal(t, big0.Bytes(), res)
+}
+
+func TestBlsSignatureVerifyNoCgo(t *testing.T) {
+	msg := "test_bls_signature_verify_precompile_contract"
+	msgHash := sha256.Sum256([]byte(msg))
+
+	privateKey1, err := RandKey(rand.Reader)
+	require.NoError(t, err)
+	privateKey2, err := RandKey(rand.Reader)
+	require.NoError(t, err)
+
+	sig1 := privateKey1.Sign(msgHash[:])
+	sig2 := privateKey2.Sign(msgHash[:])
+	sig := AggregateSignatures([]Signature{sig1, sig2})
 
 	input := msgHash[:]
 	input = append(input, sig.Marshal()...)

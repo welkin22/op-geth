@@ -50,6 +50,8 @@ require (
 	github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/karalabe/usb v0.0.3-0.20230711191512-61db3e06439c
+	github.com/karlseguin/ccache v2.0.3+incompatible
+	github.com/kilic/bls12-381 v0.1.0
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.20
@@ -57,6 +59,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/panjf2000/ants/v2 v2.4.5
 	github.com/peterh/liner v1.2.0
+	github.com/pkg/errors v0.9.1
 	github.com/protolambda/bls12-381-util v0.0.0-20220416220906-d8552aa452c7
 	github.com/prysmaticlabs/prysm/v4 v4.2.0
 	github.com/rs/cors v1.8.3
@@ -128,7 +131,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210917013441-d37c07cfda4e // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/kilic/bls12-381 v0.1.0 // indirect
+	github.com/karlseguin/expect v1.0.8 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
@@ -145,7 +148,6 @@ require (
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
