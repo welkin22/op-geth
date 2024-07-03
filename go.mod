@@ -128,6 +128,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210917013441-d37c07cfda4e // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/karlseguin/ccache v2.0.3+incompatible // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
@@ -166,6 +167,7 @@ require (
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/wsxiaoys/terminal v0.0.0-20160513160801-0940f3fc43a0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/mod v0.14.0 // indirect
@@ -178,7 +180,8 @@ require (
 )
 
 replace (
-	github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v1.0.0
+	github.com/cometbft/cometbft => github.com/welkin22/greenfield-cometbft v1.0.0-blscgo
+	github.com/prysmaticlabs/prysm/v4 v4.2.0 => github.com/welkin22/prysm/v4 v4.2.0-blscgo
 	github.com/wercker/journalhook => github.com/wercker/journalhook v0.0.0-20230927020745-64542ffa4117
 )
 
