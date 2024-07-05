@@ -127,6 +127,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210917013441-d37c07cfda4e // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/karlseguin/ccache v2.0.3+incompatible // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
@@ -177,8 +178,12 @@ require (
 )
 
 replace (
-	github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v1.0.0
+	github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v1.0.1
 	github.com/wercker/journalhook => github.com/wercker/journalhook v0.0.0-20230927020745-64542ffa4117
 )
+
+replace github.com/prysmaticlabs/prysm/v4 v4.2.0 => github.com/bnb-chain/prysm/v4 v4.2.1-0.20240704092443-da211b783b7f
+
+replace github.com/prysmaticlabs/prysm v0.0.0-20220124113610-e26cde5e091b => github.com/bnb-chain/prysm v1.4.2-0.20240704092449-3b0500f944a9
 
 //replace github.com/ethereum-optimism/superchain-registry/superchain => ../superchain-registry/superchain
