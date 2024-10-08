@@ -1451,8 +1451,10 @@ func (w *worker) generateWork(genParams *generateParams) *newPayloadResult {
 			}
 		}
 		if w.chain.TxDAGEnabledWhenMine() {
+			start = time.Now()
 			// append a DAG tx at the end of the block
 			w.appendTxDAG(work)
+			txDAGAppendTimer.UpdateSince(start)
 		}
 	}
 

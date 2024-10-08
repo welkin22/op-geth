@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -336,6 +337,7 @@ func (w *RWTxList) Copy() *RWTxList {
 var (
 	rwEventsAllocMeter = metrics.GetOrRegisterMeter("mvstate/alloc/rwevents/cnt", nil)
 	rwEventsAllocGauge = metrics.GetOrRegisterGauge("mvstate/alloc/rwevents/gauge", nil)
+	rwEventsSendWait   = metrics.NewRegisteredTimer("mvstate/rwevents/send/wait", nil)
 )
 
 var (
@@ -699,7 +701,9 @@ func (s *MVStates) BatchRecordHandle() {
 	if !s.asyncRunning || s.rwEventCacheIndex == 0 {
 		return
 	}
+	start := time.Now()
 	s.rwEventCh <- s.rwEventCache[:s.rwEventCacheIndex]
+	rwEventsSendWait.UpdateSince(start)
 	s.rwEventCache = *rwEventCachePool.Get().(*[]RWEventItem)
 	s.rwEventCache = s.rwEventCache[:cap(s.rwEventCache)]
 	s.rwEventCacheIndex = 0

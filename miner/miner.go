@@ -66,6 +66,7 @@ var (
 
 	waitPayloadTimer   = metrics.NewRegisteredTimer("miner/wait/payload", nil)
 	txDAGGenerateTimer = metrics.NewRegisteredTimer("miner/txdag/gen", nil)
+	txDAGAppendTimer   = metrics.NewRegisteredTimer("miner/txdag/appendtx", nil)
 
 	isBuildBlockInterruptCounter = metrics.NewRegisteredCounter("miner/build/interrupt", nil)
 )
