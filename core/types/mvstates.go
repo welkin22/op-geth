@@ -491,25 +491,21 @@ func (s *MVStates) handleRWEvents(items []RWEventItem) {
 				readFrom = i
 			}
 			readTo = i + 1
-			s.finaliseAccRead(s.asyncRWSet.index, item.Addr, item.State)
 		case ReadSlotRWEvent:
 			if readFrom < 0 {
 				readFrom = i
 			}
 			readTo = i + 1
-			s.finaliseSlotRead(s.asyncRWSet.index, item.Addr, item.Slot)
 		case WriteAccRWEvent:
 			if writeFrom < 0 {
 				writeFrom = i
 			}
 			writeTo = i + 1
-			s.finaliseAccWrite(s.asyncRWSet.index, item.Addr, item.State)
 		case WriteSlotRWEvent:
 			if writeFrom < 0 {
 				writeFrom = i
 			}
 			writeTo = i + 1
-			s.finaliseSlotWrite(s.asyncRWSet.index, item.Addr, item.Slot)
 		// recorde current as cannot gas fee delay
 		case CannotGasFeeDelayRWEvent:
 			s.asyncRWSet.cannotGasFeeDelay = true
@@ -538,6 +534,34 @@ func (s *MVStates) finalisePreviousRWSet(reads []RWEventItem, writes []RWEventIt
 		s.rwSets = append(s.rwSets, RWSet{index: -1})
 	}
 	s.rwSets[index] = s.asyncRWSet
+
+	for _, item := range writes {
+		if item.Event == WriteAccRWEvent {
+			s.finaliseAccWrite(index, item.Addr, item.State)
+		} else if item.Event == WriteSlotRWEvent {
+			s.finaliseSlotWrite(index, item.Addr, item.Slot)
+		}
+	}
+
+	for _, item := range reads {
+		if item.Event == ReadAccRWEvent {
+			accWrites := s.queryAccWrites(item.Addr, item.State)
+			if accWrites != nil {
+				if _, ok := accWrites.SearchTxIndex(index); ok {
+					continue
+				}
+			}
+			s.finaliseAccRead(index, item.Addr, item.State)
+		} else if item.Event == ReadSlotRWEvent {
+			slotWrites := s.querySlotWrites(item.Addr, item.Slot)
+			if slotWrites != nil {
+				if _, ok := slotWrites.SearchTxIndex(index); ok {
+					continue
+				}
+			}
+			s.finaliseSlotRead(index, item.Addr, item.Slot)
+		}
+	}
 
 	if index > s.nextFinaliseIndex {
 		log.Error("finalise in wrong order", "next", s.nextFinaliseIndex, "input", index)
