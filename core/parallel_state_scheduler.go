@@ -192,7 +192,7 @@ func (tls TxLevels) Run(execute func(*PEVMTxRequest) *PEVMTxResult, confirm func
 		confirmed: -1,
 	}
 
-	trustDAG := false
+	trustDAG := true
 
 	// execute all transactions in parallel
 	for _, txLevel := range tls {
