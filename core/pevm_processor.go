@@ -262,6 +262,7 @@ func (p *PEVMProcessor) Process(block *types.Block, statedb *state.StateDB, cfg 
 			atomic.AddInt64(&executeDurations, time.Since(t0).Nanoseconds())
 			if res.err != nil {
 				atomic.AddUint64(&p.debugConflictRedoNum, 1)
+				log.Error("parallel evm execute failed", "err", res.err, "txIndex", pr.txIndex)
 			}
 		}(time.Now())
 
@@ -274,6 +275,7 @@ func (p *PEVMProcessor) Process(block *types.Block, statedb *state.StateDB, cfg 
 			atomic.AddInt64(&confirmDurations, time.Since(t0).Nanoseconds())
 			if err != nil {
 				atomic.AddUint64(&p.debugConflictRedoNum, 1)
+				log.Error("parallel evm confirm failed", "err", err, "txIndex", pr.txReq.txIndex)
 			}
 		}(time.Now())
 		log.Debug("pevm confirm", "txIndex", pr.txReq.txIndex)
