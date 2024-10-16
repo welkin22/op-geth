@@ -147,8 +147,9 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 		}
 		switch true {
 		case toConfirm.executed != nil:
+			log.Error("pevm exec failed,rerun", "err", toConfirm.executed, "idx", i)
 			if err := cq.rerun(i, execute, confirm); err != nil {
-				log.Error("pevm exec failed,rerun", "err", err, "idx", i)
+				log.Error("pevm rerun failed", "err", err, "idx", i)
 				return err, toConfirm.result.txReq.txIndex
 			}
 
