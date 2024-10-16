@@ -155,9 +155,9 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 		default:
 			//try the first confirm
 			if err := confirm(toConfirm.result); err != nil {
-				// TODO add logs for err
+				log.Error("pevm confirm failed,rerun", "err", err, "idx", i)
 				if err = cq.rerun(i, execute, confirm); err != nil {
-					log.Error("pevm confirm failed,rerun", "err", err, "idx", i)
+					log.Error("pevm rerun failed", "err", err, "idx", i)
 					return err, toConfirm.result.txReq.txIndex
 				}
 			}
