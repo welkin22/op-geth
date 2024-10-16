@@ -142,13 +142,13 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 		// the tx has not been executed yet, which means the higher-index transactions can not be confirmed before it
 		// so stop the loop.
 		if toConfirm.result == nil {
+			log.Debug("tx not exec yet,skip confirm", "idx", i)
 			break
 		}
 		switch true {
 		case toConfirm.executed != nil:
 			if err := cq.rerun(i, execute, confirm); err != nil {
-				// TODO add logs for err
-				// rerun failed, something very wrong.
+				log.Error("pevm exec failed,rerun", "err", err)
 				return err, toConfirm.result.txReq.txIndex
 			}
 
@@ -157,8 +157,7 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 			if err := confirm(toConfirm.result); err != nil {
 				// TODO add logs for err
 				if err = cq.rerun(i, execute, confirm); err != nil {
-					// TODO add logs for err
-					// rerun failed, something very wrong.
+					log.Error("pevm confirm failed,rerun", "err", err)
 					return err, toConfirm.result.txReq.txIndex
 				}
 			}
