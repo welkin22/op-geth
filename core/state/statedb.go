@@ -59,6 +59,7 @@ type StateKeys map[common.Hash]struct{}
 
 type StateObjectSyncMap struct {
 	sync.Map
+	mu sync.Mutex
 }
 
 type DelayedGasFee struct {
@@ -73,11 +74,27 @@ func (s *StateObjectSyncMap) LoadStateObject(addr common.Address) (*stateObject,
 	if !ok {
 		return nil, ok
 	}
-	return so.(*stateObject), ok
+	return so.(*VersionStateObject).stateObject, ok
 }
 
 func (s *StateObjectSyncMap) StoreStateObject(addr common.Address, stateObject *stateObject) {
-	s.Store(addr, stateObject)
+	s.Store(addr, &VersionStateObject{stateObject: stateObject, version: 0})
+}
+
+func (s *StateObjectSyncMap) StoreStateObjectIfVersionGt(addr common.Address, stateObject *stateObject, version int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	value, ok := s.Load(addr)
+	if !ok {
+		s.Store(addr, &VersionStateObject{stateObject: stateObject, version: version})
+	} else {
+		if value.(*VersionStateObject).version <= version {
+			s.Store(addr, &VersionStateObject{
+				stateObject: stateObject,
+				version:     version,
+			})
+		}
+	}
 }
 
 // loadStateObj is the entry for loading state object from stateObjects in StateDB or stateObjects in parallel
@@ -164,6 +181,11 @@ type ParallelState struct {
 	useDAG                        bool
 	conflictCheckStateObjectCache *sync.Map
 	conflictCheckKVReadCache      *sync.Map
+}
+
+type VersionStateObject struct {
+	version     int
+	stateObject *stateObject
 }
 
 // StateDB structs within the ethereum protocol are used to store anything
@@ -971,6 +993,42 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 	return obj
 }
 
+// getDeletedStateObject is similar to getStateObject, but instead of returning
+// nil for a deleted state object, it returns the actual object with the deleted
+// flag set. This is needed by the state journal to revert to the correct s-
+// destructed object instead of wiping all knowledge about the state object.
+func (s *StateDB) getDeletedStateObjectWithTxIdx(addr common.Address, txIdx int) *stateObject {
+	s.RecordRead(types.AccountStateKey(addr, types.AccountSelf), struct{}{})
+
+	// Prefer live objects if any is available
+	if obj, _ := s.getStateObjectFromStateObjects(addr); obj != nil {
+		return obj
+	}
+
+	data, ok := s.getStateObjectFromSnapshotOrTrie(addr)
+	if !ok {
+		return nil
+	}
+	// Insert into the live set
+	obj := newObject(s, s.isParallel, addr, data)
+	s.setStateObjectWithTxIdx(obj, txIdx)
+	return obj
+}
+
+func (s *StateDB) setStateObjectWithTxIdx(object *stateObject, txIdx int) {
+	if s.isParallel {
+		if s.parallel.isSlotDB {
+			s.parallel.locatStateObjects[object.address] = object
+		} else {
+			// When a state object is stored into s.parallel.stateObjects,
+			// it belongs to base StateDB, it is confirmed and valid.
+			s.parallel.stateObjects.StoreStateObjectIfVersionGt(object.address, object, txIdx)
+		}
+	} else {
+		s.stateObjects[object.Address()] = object
+	}
+}
+
 func (s *StateDB) setStateObject(object *stateObject) {
 	if s.isParallel {
 		if s.parallel.isSlotDB {
@@ -978,7 +1036,7 @@ func (s *StateDB) setStateObject(object *stateObject) {
 		} else {
 			// When a state object is stored into s.parallel.stateObjects,
 			// it belongs to base StateDB, it is confirmed and valid.
-			s.parallel.stateObjects.Store(object.address, object)
+			s.parallel.stateObjects.Store(object.address, &VersionStateObject{stateObject: object})
 		}
 	} else {
 		s.stateObjects[object.Address()] = object

@@ -554,7 +554,7 @@ func (pst *UncommittedDB) getDeletedObject(addr common.Address, maindb *StateDB)
 		return pst.cache[addr]
 	}
 	// it reads the cache from the maindb
-	obj := maindb.getDeletedStateObject(addr)
+	obj := maindb.getDeletedStateObjectWithTxIdx(addr, pst.txIndex)
 	defer func() {
 		pst.reads.recordOnce(addr, copyObj(obj))
 	}()
@@ -628,7 +628,7 @@ func (pst *UncommittedDB) getDeletedObjectWithCode(addr common.Address, maindb *
 		return o
 	}
 	// load code from maindb
-	deletedObj := pst.maindb.getDeletedStateObject(addr)
+	deletedObj := pst.maindb.getDeletedStateObjectWithTxIdx(addr, pst.txIndex)
 	if deletedObj == nil {
 		pst.reads.recordCodeOnce(addr, common.Hash{}, nil)
 	} else {
@@ -653,7 +653,7 @@ func (pst *UncommittedDB) getDeletedObjectWithState(addr common.Address, maindb 
 		return o
 	}
 	// load code from maindb
-	deletedObj := pst.maindb.getDeletedStateObject(addr)
+	deletedObj := pst.maindb.getDeletedStateObjectWithTxIdx(addr, pst.txIndex)
 	var value = common.Hash{}
 	if deletedObj == nil {
 		pst.reads.recordKVOnce(addr, hash, common.Hash{})

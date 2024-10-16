@@ -97,11 +97,11 @@ func (p *PEVMProcessor) executeInSlot(maindb *state.StateDB, txReq *PEVMTxReques
 	gpSlot := new(GasPool).AddGas(txReq.gasLimit) // block.GasLimit()
 
 	on := txReq.tx.Nonce()
+	slotDB.SetTxContext(txReq.tx.Hash(), txReq.txIndex)
 	if txReq.msg.IsDepositTx && p.config.IsOptimismRegolith(vmenv.Context.Time) {
 		on = slotDB.GetNonce(txReq.msg.From)
 	}
 
-	slotDB.SetTxContext(txReq.tx.Hash(), txReq.txIndex)
 	evm, result, err := pevmApplyTransactionStageExecution(txReq.msg, gpSlot, slotDB, vmenv, p.delayGasFee)
 	txResult := PEVMTxResult{
 		txReq:         txReq,
