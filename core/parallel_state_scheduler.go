@@ -148,7 +148,7 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 		switch true {
 		case toConfirm.executed != nil:
 			if err := cq.rerun(i, execute, confirm); err != nil {
-				log.Error("pevm exec failed,rerun", "err", err)
+				log.Error("pevm exec failed,rerun", "err", err, "idx", i)
 				return err, toConfirm.result.txReq.txIndex
 			}
 
@@ -157,7 +157,7 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 			if err := confirm(toConfirm.result); err != nil {
 				// TODO add logs for err
 				if err = cq.rerun(i, execute, confirm); err != nil {
-					log.Error("pevm confirm failed,rerun", "err", err)
+					log.Error("pevm confirm failed,rerun", "err", err, "idx", i)
 					return err, toConfirm.result.txReq.txIndex
 				}
 			}
