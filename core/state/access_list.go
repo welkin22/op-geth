@@ -54,6 +54,13 @@ func newAccessList() *accessList {
 	}
 }
 
+// newAccessList creates a new accessList.
+func newAccessListWithSize(size int) *accessList {
+	return &accessList{
+		addresses: make(map[common.Address]int, size),
+	}
+}
+
 // Copy creates an independent copy of an accessList.
 func (a *accessList) Copy() *accessList {
 	cp := newAccessList()

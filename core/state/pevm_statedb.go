@@ -120,7 +120,7 @@ func (pst *UncommittedDB) Prepare(rules params.Rules, sender, coinbase common.Ad
 	pst.isBerlin = rules.IsBerlin
 	if rules.IsBerlin {
 		// Clear out any leftover from previous executions
-		al := newAccessList()
+		al := newAccessListWithSize(32)
 		pst.accessList = al
 
 		al.AddAddress(sender)
