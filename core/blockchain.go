@@ -2796,7 +2796,7 @@ func writeTxDAGToFile(writeHandle *os.File, item TxDAGOutputItem) error {
 	return err
 }
 
-var TxDAGCacheSize = uint64(10000)
+var TxDAGCacheSize = uint64(100)
 
 type TxDAGFileReader struct {
 	output  string
