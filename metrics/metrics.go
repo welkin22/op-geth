@@ -209,6 +209,7 @@ func CollectProcessMetrics(refresh time.Duration) {
 		cpuGoroutines         = GetOrRegisterGauge("system/cpu/goroutines", DefaultRegistry)
 		cpuSchedLatency       = getOrRegisterRuntimeHistogram("system/cpu/schedlatency", secondsToNs, nil)
 		gcPauses              = getOrRegisterRuntimeHistogram("system/gc/pauses", secondsToNs, nil)
+		gcCycleTotal          = GetOrRegisterMeter("system/gc/cycle/total", DefaultRegistry)
 		gcAllocsBytes         = GetOrRegisterMeter("system/gc/allocs/bytes", DefaultRegistry)
 		gcAllocsObjects       = GetOrRegisterMeter("system/gc/allocs/objects", DefaultRegistry)
 		gcFreesBytes          = GetOrRegisterMeter("system/gc/frees/bytes", DefaultRegistry)
@@ -261,6 +262,7 @@ func CollectProcessMetrics(refresh time.Duration) {
 		cpuGoroutines.Update(int64(rstats[now].Goroutines))
 		cpuSchedLatency.update(rstats[now].SchedLatency)
 		gcPauses.update(rstats[now].GCPauses)
+		gcCycleTotal.Mark(int64(rstats[now].GCCyclesTotal))
 
 		gcAllocsBytes.Mark(int64(rstats[now].GCAllocBytes - rstats[prev].GCAllocBytes))
 		gcAllocsObjects.Mark(int64(rstats[now].GCAllocObjects - rstats[prev].GCAllocObjects))
