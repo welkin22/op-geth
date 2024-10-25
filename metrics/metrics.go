@@ -82,9 +82,16 @@ func init() {
 var threadCreateProfile = pprof.Lookup("threadcreate")
 
 type runtimeStats struct {
-	GCPauses     *metrics.Float64Histogram
-	GCAllocBytes uint64
-	GCFreedBytes uint64
+	GCPauses             *metrics.Float64Histogram
+	GCCyclesTotal        uint64
+	GCAllocBytes         uint64
+	GCAllocObjects       uint64
+	GCFreedBytes         uint64
+	GCFreedObjects       uint64
+	GCObjects            uint64
+	GCGoal               uint64
+	GCLive               uint64
+	GCLimiterLastEnabled uint64
 
 	MemTotal     uint64
 	HeapObjects  uint64
@@ -98,8 +105,15 @@ type runtimeStats struct {
 
 var runtimeSamples = []metrics.Sample{
 	{Name: "/gc/pauses:seconds"}, // histogram
+	{Name: "/gc/cycles/total:gc-cycles"},
 	{Name: "/gc/heap/allocs:bytes"},
+	{Name: "/gc/heap/allocs:objects"},
 	{Name: "/gc/heap/frees:bytes"},
+	{Name: "/gc/heap/frees:objects"},
+	{Name: "/gc/heap/objects:objects"},
+	{Name: "/gc/heap/goal:bytes"},
+	{Name: "/gc/heap/live:bytes"},
+	{Name: "/gc/limiter/last-enabled:gc-cycle"},
 	{Name: "/memory/classes/total:bytes"},
 	{Name: "/memory/classes/heap/objects:bytes"},
 	{Name: "/memory/classes/heap/free:bytes"},
@@ -128,10 +142,24 @@ func readRuntimeStats(v *runtimeStats) {
 		switch s.Name {
 		case "/gc/pauses:seconds":
 			v.GCPauses = s.Value.Float64Histogram()
+		case "/gc/cycles/total:gc-cycles":
+			v.GCCyclesTotal = s.Value.Uint64()
 		case "/gc/heap/allocs:bytes":
 			v.GCAllocBytes = s.Value.Uint64()
+		case "/gc/heap/allocs:objects":
+			v.GCAllocObjects = s.Value.Uint64()
 		case "/gc/heap/frees:bytes":
 			v.GCFreedBytes = s.Value.Uint64()
+		case "/gc/heap/frees:objects":
+			v.GCFreedObjects = s.Value.Uint64()
+		case "/gc/heap/objects:objects":
+			v.GCObjects = s.Value.Uint64()
+		case "/gc/heap/goal:bytes":
+			v.GCGoal = s.Value.Uint64()
+		case "/gc/heap/live:bytes":
+			v.GCLive = s.Value.Uint64()
+		case "/gc/limiter/last-enabled:gc-cycle":
+			v.GCLimiterLastEnabled = s.Value.Uint64()
 		case "/memory/classes/total:bytes":
 			v.MemTotal = s.Value.Uint64()
 		case "/memory/classes/heap/objects:bytes":
@@ -180,9 +208,15 @@ func CollectProcessMetrics(refresh time.Duration) {
 		cpuThreads            = GetOrRegisterGauge("system/cpu/threads", DefaultRegistry)
 		cpuGoroutines         = GetOrRegisterGauge("system/cpu/goroutines", DefaultRegistry)
 		cpuSchedLatency       = getOrRegisterRuntimeHistogram("system/cpu/schedlatency", secondsToNs, nil)
-		memPauses             = getOrRegisterRuntimeHistogram("system/memory/pauses", secondsToNs, nil)
-		memAllocs             = GetOrRegisterMeter("system/memory/allocs", DefaultRegistry)
-		memFrees              = GetOrRegisterMeter("system/memory/frees", DefaultRegistry)
+		gcPauses              = getOrRegisterRuntimeHistogram("system/gc/pauses", secondsToNs, nil)
+		gcAllocsBytes         = GetOrRegisterMeter("system/gc/allocs/bytes", DefaultRegistry)
+		gcAllocsObjects       = GetOrRegisterMeter("system/gc/allocs/objects", DefaultRegistry)
+		gcFreesBytes          = GetOrRegisterMeter("system/gc/frees/bytes", DefaultRegistry)
+		gcFreesObjects        = GetOrRegisterMeter("system/gc/frees/objects", DefaultRegistry)
+		gcObjects             = GetOrRegisterGauge("system/gc/objects", DefaultRegistry)
+		gcGoal                = GetOrRegisterGauge("system/gc/goal", DefaultRegistry)
+		gcLive                = GetOrRegisterGauge("system/gc/live", DefaultRegistry)
+		gcLimiterLastEnabled  = GetOrRegisterMeter("system/gc/limiter/last_enabled", DefaultRegistry)
 		memTotal              = GetOrRegisterGauge("system/memory/held", DefaultRegistry)
 		heapUsed              = GetOrRegisterGauge("system/memory/used", DefaultRegistry)
 		heapObjects           = GetOrRegisterGauge("system/memory/objects", DefaultRegistry)
@@ -226,10 +260,17 @@ func CollectProcessMetrics(refresh time.Duration) {
 
 		cpuGoroutines.Update(int64(rstats[now].Goroutines))
 		cpuSchedLatency.update(rstats[now].SchedLatency)
-		memPauses.update(rstats[now].GCPauses)
+		gcPauses.update(rstats[now].GCPauses)
 
-		memAllocs.Mark(int64(rstats[now].GCAllocBytes - rstats[prev].GCAllocBytes))
-		memFrees.Mark(int64(rstats[now].GCFreedBytes - rstats[prev].GCFreedBytes))
+		gcAllocsBytes.Mark(int64(rstats[now].GCAllocBytes - rstats[prev].GCAllocBytes))
+		gcAllocsObjects.Mark(int64(rstats[now].GCAllocObjects - rstats[prev].GCAllocObjects))
+		gcFreesBytes.Mark(int64(rstats[now].GCFreedBytes - rstats[prev].GCFreedBytes))
+		gcFreesObjects.Mark(int64(rstats[now].GCFreedObjects - rstats[prev].GCFreedObjects))
+
+		gcObjects.Update(int64(rstats[now].GCObjects))
+		gcGoal.Update(int64(rstats[now].GCGoal))
+		gcLive.Update(int64(rstats[now].GCLive))
+		gcLimiterLastEnabled.Mark(int64(rstats[now].GCLimiterLastEnabled))
 
 		memTotal.Update(int64(rstats[now].MemTotal))
 		heapUsed.Update(int64(rstats[now].MemTotal - rstats[now].HeapUnused - rstats[now].HeapFree - rstats[now].HeapReleased))
