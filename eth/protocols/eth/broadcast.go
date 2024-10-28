@@ -34,8 +34,6 @@ const (
 var (
 	txAnnounceAbandonMeter  = metrics.NewRegisteredMeter("eth/fetcher/transaction/announces/abandon", nil)
 	txBroadcastAbandonMeter = metrics.NewRegisteredMeter("eth/fetcher/transaction/broadcasts/abandon", nil)
-	txP2PAnnQueueGauge      = metrics.NewRegisteredGauge("eth/fetcher/transaction/p2p/ann/queue", nil)
-	txP2PBroadQueueGauge    = metrics.NewRegisteredGauge("eth/fetcher/transaction/p2p/broad/queue", nil)
 )
 
 // safeGetPeerIP
@@ -135,8 +133,6 @@ func (p *Peer) broadcastTransactions() {
 				queue = queue[:copy(queue, queue[len(queue)-maxQueuedTxs:])]
 			}
 
-			txP2PBroadQueueGauge.Update(int64(len(queue)))
-
 		case <-done:
 			done = nil
 
@@ -211,8 +207,6 @@ func (p *Peer) announceTransactions() {
 				// Fancy copy and resize to ensure buffer doesn't grow indefinitely
 				queue = queue[:copy(queue, queue[len(queue)-maxQueuedTxAnns:])]
 			}
-
-			txP2PAnnQueueGauge.Update(int64(len(queue)))
 
 		case <-done:
 			done = nil

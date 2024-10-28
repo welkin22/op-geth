@@ -400,15 +400,6 @@ func (f *TxFetcher) Stop() {
 	close(f.quit)
 }
 
-func (f *TxFetcher) IsWorking() (bool, error) {
-	select {
-	case <-f.quit:
-		return false, errTerminated
-	default:
-		return true, nil
-	}
-}
-
 func (f *TxFetcher) loop() {
 	var (
 		waitTimer    = new(mclock.Timer)
