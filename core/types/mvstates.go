@@ -12,6 +12,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var DebugMVStateDuration time.Duration
+var DebugMVStateCount int64
+
 type AccountState byte
 
 var (
@@ -610,6 +613,10 @@ func (s *MVStates) RecordAccountRead(addr common.Address, state AccountState) {
 	if !s.asyncRunning || !s.recordingRead {
 		return
 	}
+	defer func(start time.Time) {
+		DebugMVStateDuration += time.Since(start)
+		DebugMVStateCount++
+	}(time.Now())
 	if s.rwEventCacheIndex < len(s.rwEventCache) {
 		s.rwEventCache[s.rwEventCacheIndex].Event = ReadAccRWEvent
 		s.rwEventCache[s.rwEventCacheIndex].Addr = addr
@@ -629,6 +636,10 @@ func (s *MVStates) RecordStorageRead(addr common.Address, slot common.Hash) {
 	if !s.asyncRunning || !s.recordingRead {
 		return
 	}
+	defer func(start time.Time) {
+		DebugMVStateDuration += time.Since(start)
+		DebugMVStateCount++
+	}(time.Now())
 	if s.rwEventCacheIndex < len(s.rwEventCache) {
 		s.rwEventCache[s.rwEventCacheIndex].Event = ReadSlotRWEvent
 		s.rwEventCache[s.rwEventCacheIndex].Addr = addr
@@ -648,6 +659,10 @@ func (s *MVStates) RecordAccountWrite(addr common.Address, state AccountState) {
 	if !s.asyncRunning || !s.recordingWrite {
 		return
 	}
+	defer func(start time.Time) {
+		DebugMVStateDuration += time.Since(start)
+		DebugMVStateCount++
+	}(time.Now())
 	if s.rwEventCacheIndex < len(s.rwEventCache) {
 		s.rwEventCache[s.rwEventCacheIndex].Event = WriteAccRWEvent
 		s.rwEventCache[s.rwEventCacheIndex].Addr = addr
@@ -667,6 +682,10 @@ func (s *MVStates) RecordStorageWrite(addr common.Address, slot common.Hash) {
 	if !s.asyncRunning || !s.recordingWrite {
 		return
 	}
+	defer func(start time.Time) {
+		DebugMVStateDuration += time.Since(start)
+		DebugMVStateCount++
+	}(time.Now())
 	if s.rwEventCacheIndex < len(s.rwEventCache) {
 		s.rwEventCache[s.rwEventCacheIndex].Event = WriteSlotRWEvent
 		s.rwEventCache[s.rwEventCacheIndex].Addr = addr
@@ -686,6 +705,10 @@ func (s *MVStates) RecordCannotDelayGasFee() {
 	if !s.asyncRunning || !s.recordingWrite {
 		return
 	}
+	defer func(start time.Time) {
+		DebugMVStateDuration += time.Since(start)
+		DebugMVStateCount++
+	}(time.Now())
 	if s.rwEventCacheIndex < len(s.rwEventCache) {
 		s.rwEventCache[s.rwEventCacheIndex].Event = CannotGasFeeDelayRWEvent
 		s.rwEventCacheIndex++

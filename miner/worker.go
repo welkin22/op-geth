@@ -1352,8 +1352,12 @@ func (w *worker) estimateGasForTxDAG(env *environment) uint64 {
 func (w *worker) generateWork(genParams *generateParams) *newPayloadResult {
 	// TODO delete after debug performance metrics
 	core.DebugInnerExecutionDuration = 0
+	types.DebugMVStateDuration = 0
+	types.DebugMVStateCount = 0
 	defer func() {
 		core.DebugInnerExecutionDuration = 0
+		types.DebugMVStateDuration = 0
+		types.DebugMVStateCount = 0
 	}()
 
 	work, err := w.prepareWork(genParams)
@@ -1483,6 +1487,8 @@ func (w *worker) generateWork(genParams *generateParams) *newPayloadResult {
 	accountHashTimer.Update(work.state.AccountHashes)                // Account hashes are complete(in FinalizeAndAssemble)
 	storageHashTimer.Update(work.state.StorageHashes)                // Storage hashes are complete(in FinalizeAndAssemble)
 	txDAGGenerateTimer.Update(work.state.TxDAGGenerate)
+	txDAGRecordCostTimer.Update(types.DebugMVStateDuration)
+	txDAGRecordCounter.Inc(types.DebugMVStateCount)
 
 	innerExecutionTimer.Update(core.DebugInnerExecutionDuration)
 
