@@ -2,8 +2,10 @@ package types
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
 
 	"github.com/cometbft/cometbft/libs/rand"
@@ -11,6 +13,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDecodeCalldata(t *testing.T) {
+	calldata := "0x5517ed8c0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001101cfcec2c002c1c0c1c0c1c0c1c0c2c001000000000000000000000000000000"
+	decode, err := hexutil.Decode(calldata)
+	if err != nil {
+		return
+	}
+	dagCalldata, err := DecodeTxDAGCalldata(decode)
+	if err != nil {
+		t.Errorf("Error decoding calldata: %s", err)
+		return
+	}
+	fmt.Println(dagCalldata)
+	//for i := 0; i < dagCalldata.TxCount(); i++ {
+	//	dep := dagCalldata.TxDep(i)
+	//	log.Printf("idx:%d,dep:%v", i, dep.TxIndexes)
+	//}
+	//assert.Equal(t, true, dagCalldata.TxDep(186).Exist(82))
+	//assert.Equal(t, 0, dagCalldata.TxDep(187).Count())
+}
 
 func TestEncodeTxDAGCalldata(t *testing.T) {
 	tg := mockSimpleDAG()
