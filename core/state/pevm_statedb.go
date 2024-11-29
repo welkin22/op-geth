@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 )
@@ -738,6 +739,7 @@ func (s state) conflicts(maindb *StateDB) error {
 	}
 	// newly created object, no need to compare anything
 	if obj == nil {
+		log.Debug("obj is nil,skip conflicts check")
 		return nil
 	}
 	// they are all deleted, no need to compare anything
