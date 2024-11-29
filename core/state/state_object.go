@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/opcodeCompiler/compiler"
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -322,6 +323,8 @@ func (s *stateObject) finaliseRWSet() {
 	if s.dirtyCodeHash != nil && !slices.Equal(s.dirtyCodeHash, s.data.CodeHash) {
 		ms.RecordAccountWrite(s.address, types.AccountCodeHash)
 	}
+	log.Info("stateObject finaliseRWSet", "dirtyNonce", s.dirtyNonce, "dataNonce", s.data.Nonce,
+		"dirtyBalance", s.dirtyBalance, "dataBalance", s.data.Balance, "dirtyCodeHash", s.dirtyCodeHash, "dataCodeHash", s.data.CodeHash)
 }
 
 // updateTrie is responsible for persisting cached storage changes into the

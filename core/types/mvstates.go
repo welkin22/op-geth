@@ -535,6 +535,9 @@ func (s *MVStates) finalisePreviousRWSet(reads []RWEventItem, writes []RWEventIt
 	}
 	s.rwSets[index] = s.asyncRWSet
 
+	rwSet := toRWSet(index, reads, writes)
+	log.Info("finalisePreviousRWSet", "rwSet", rwSet)
+
 	for _, item := range writes {
 		if item.Event == WriteAccRWEvent {
 			s.finaliseAccWrite(index, item.Addr, item.State)
@@ -570,6 +573,64 @@ func (s *MVStates) finalisePreviousRWSet(reads []RWEventItem, writes []RWEventIt
 	// reset nextFinaliseIndex to index+1, it may revert to previous txs
 	s.nextFinaliseIndex = index + 1
 	s.resolveDepsMapCacheByWrites(index, reads, writes)
+}
+
+func toRWSet(index int, reads []RWEventItem, writes []RWEventItem) *RWSet {
+	accReadSet := make(map[common.Address]map[AccountState]struct{})
+	slotReadSet := make(map[common.Address]map[common.Hash]struct{})
+	for _, readItem := range reads {
+		if readItem.Event == ReadAccRWEvent {
+			stateSet, ok := accReadSet[readItem.Addr]
+			if ok {
+				stateSet[readItem.State] = struct{}{}
+			} else {
+				newStateSet := make(map[AccountState]struct{})
+				newStateSet[readItem.State] = struct{}{}
+				accReadSet[readItem.Addr] = newStateSet
+			}
+		} else {
+			stateSet, ok := slotReadSet[readItem.Addr]
+			if ok {
+				stateSet[readItem.Slot] = struct{}{}
+			} else {
+				newStateSet := make(map[common.Hash]struct{})
+				newStateSet[readItem.Slot] = struct{}{}
+				slotReadSet[readItem.Addr] = newStateSet
+			}
+		}
+	}
+
+	accWriteSet := make(map[common.Address]map[AccountState]struct{})
+	slotWriteSet := make(map[common.Address]map[common.Hash]struct{})
+	for _, writeItem := range writes {
+		if writeItem.Event == WriteAccRWEvent {
+			stateSet, ok := accWriteSet[writeItem.Addr]
+			if ok {
+				stateSet[writeItem.State] = struct{}{}
+			} else {
+				newStateSet := make(map[AccountState]struct{})
+				newStateSet[writeItem.State] = struct{}{}
+				accWriteSet[writeItem.Addr] = newStateSet
+			}
+		} else {
+			stateSet, ok := slotWriteSet[writeItem.Addr]
+			if ok {
+				stateSet[writeItem.Slot] = struct{}{}
+			} else {
+				newStateSet := make(map[common.Hash]struct{})
+				newStateSet[writeItem.Slot] = struct{}{}
+				slotWriteSet[writeItem.Addr] = newStateSet
+			}
+		}
+	}
+
+	return &RWSet{
+		index:        index,
+		accReadSet:   accReadSet,
+		slotReadSet:  slotReadSet,
+		accWriteSet:  accWriteSet,
+		slotWriteSet: slotWriteSet,
+	}
 }
 
 func (s *MVStates) RecordNewTx(index int) {
