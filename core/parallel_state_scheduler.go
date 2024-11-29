@@ -156,21 +156,21 @@ func (cq *confirmQueue) confirm(execute func(*PEVMTxRequest) *PEVMTxResult, conf
 		}
 		switch true {
 		case toConfirm.executed != nil:
-			if err := cq.rerun(i, execute, confirm); err != nil {
-				// TODO add logs for err
-				// rerun failed, something very wrong.
-				return err, toConfirm.result.txReq.txIndex
-			}
+			// TODO add logs for err
+			// rerun failed, something very wrong.
+			return toConfirm.executed, toConfirm.result.txReq.txIndex
+			//if err := cq.rerun(i, execute, confirm); err != nil {
+			//}
 
 		default:
 			//try the first confirm
 			if err := confirm(toConfirm.result); err != nil {
 				// TODO add logs for err
-				if err = cq.rerun(i, execute, confirm); err != nil {
-					// TODO add logs for err
-					// rerun failed, something very wrong.
-					return err, toConfirm.result.txReq.txIndex
-				}
+				// TODO add logs for err
+				// rerun failed, something very wrong.
+				return err, toConfirm.result.txReq.txIndex
+				//if err = cq.rerun(i, execute, confirm); err != nil {
+				//}
 			}
 		}
 		cq.confirmed = i

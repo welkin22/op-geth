@@ -745,6 +745,7 @@ func (s state) conflicts(maindb *StateDB) error {
 	}
 	// newly created object, no need to compare anything
 	if obj == nil {
+		log.Debug("obj is nil,skip conflicts check")
 		return nil
 	}
 	// they are all deleted, no need to compare anything
