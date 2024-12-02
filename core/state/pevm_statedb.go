@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 )
@@ -156,6 +157,9 @@ func (pst *UncommittedDB) SubBalance(addr common.Address, amount *uint256.Int) {
 	pst.journal.append(newJBalance(pst.cache[addr], addr))
 	obj := pst.getOrNewObject(addr)
 	newb := new(uint256.Int).Sub(obj.balance, amount)
+	if addr == params.OptimismL1FeeRecipient {
+		log.Info("UncommittedDB SubBalance", "addr", addr, "old", obj.balance, "new", newb)
+	}
 	pst.cache.setBalance(addr, newb)
 }
 
@@ -163,6 +167,9 @@ func (pst *UncommittedDB) AddBalance(addr common.Address, amount *uint256.Int) {
 	pst.journal.append(newJBalance(pst.cache[addr], addr))
 	obj := pst.getOrNewObject(addr)
 	newb := new(uint256.Int).Add(obj.balance, amount)
+	if addr == params.OptimismL1FeeRecipient {
+		log.Info("UncommittedDB AddBalance", "addr", addr, "old", obj.balance, "new", newb)
+	}
 	pst.cache.setBalance(addr, newb)
 }
 
@@ -780,6 +787,10 @@ func (s state) merge(maindb *StateDB) {
 	}
 	obj := maindb.getOrNewStateObject(s.addr)
 	if s.modified&ModifyBalance != 0 {
+		if obj.address == params.OptimismL1FeeRecipient {
+			log.Info("uncommitted db merge to maindb setBalance",
+				"addr", obj.address, "old", obj.Balance(), "dirty", obj.dirtyBalance, "new", s.balance)
+		}
 		obj.SetBalance(s.balance)
 	}
 	if s.modified&ModifyNonce != 0 {

@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/opcodeCompiler/compiler"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	"golang.org/x/exp/slices"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -734,6 +736,9 @@ func (s *stateObject) SetBalance(amount *uint256.Int) {
 		account: &s.address,
 		prev:    new(uint256.Int).Set(s.Balance()),
 	})
+	if s.address == params.OptimismL1FeeRecipient {
+		log.Info("stateObject setBalance", "addr", s.address, "old", s.Balance(), "dirty", s.dirtyBalance, "new", amount)
+	}
 	s.setBalance(amount)
 }
 

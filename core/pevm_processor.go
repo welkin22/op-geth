@@ -185,9 +185,13 @@ func (p *PEVMProcessor) confirmTxResult(statedb *state.StateDB, gp *GasPool, res
 			statedb.AddBalance(params.OptimismBaseFeeRecipient, delayGasFee.BaseFee)
 		}
 		if delayGasFee.L1Fee != nil {
+			log.Info("pevm confirm AddBalance for l1fee", "txIdx", result.txReq.txIndex, "l1Fee", delayGasFee.L1Fee)
 			statedb.AddBalance(params.OptimismL1FeeRecipient, delayGasFee.L1Fee)
 		}
 	}
+
+	l1Balance := statedb.GetBalance(params.OptimismL1FeeRecipient)
+	log.Info("L1FeeRecipient balance after tx", "idx", result.txReq.txIndex, "l1Balance", l1Balance)
 
 	// Do IntermediateRoot after mergeSlotDB.
 	if !isByzantium {
