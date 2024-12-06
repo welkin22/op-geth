@@ -291,12 +291,12 @@ func (p *PEVMProcessor) Process(block *types.Block, statedb state.StateDBer, cfg
 		}(time.Now())
 		log.Debug("pevm confirm", "txIndex", pr.txReq.txIndex)
 		return p.confirmTxResult(statedb, gp, pr, enableParallelMerge)
-	}, func(levels TxLevels, cq *confirmQueue) (err error) {
+	}, func(level TxLevel, cq *confirmQueue) (err error) {
 		defer func(t0 time.Time) {
 			atomic.AddInt64(&confirmDurations, time.Since(t0).Nanoseconds())
 		}(time.Now())
 		log.Debug("after parallel confirm")
-		return p.afterParallelConfirm(statedb, block.Header(), levels, cq)
+		return p.afterParallelConfirm(statedb, block.Header(), level, cq)
 	}, p.unorderedMerge, enableParallelMerge)
 	parallelRunDuration := time.Since(start) - buildLevelsDuration
 	if err != nil {
@@ -355,8 +355,8 @@ func (p *PEVMProcessor) Process(block *types.Block, statedb state.StateDBer, cfg
 	return p.receipts, allLogs, usedGas.Load(), nil
 }
 
-func (p *PEVMProcessor) afterParallelConfirm(statedb state.StateDBer, header *types.Header, levels TxLevels, cq *confirmQueue) error {
-	txCount := levels.txCount()
+func (p *PEVMProcessor) afterParallelConfirm(statedb state.StateDBer, header *types.Header, level TxLevel, cq *confirmQueue) error {
+	txCount := len(level)
 	tipChan := make(chan *state.DelayedGasFee, txCount)
 	baseChan := make(chan *state.DelayedGasFee, txCount)
 	l1Chan := make(chan *state.DelayedGasFee, txCount)
@@ -392,21 +392,19 @@ func (p *PEVMProcessor) afterParallelConfirm(statedb state.StateDBer, header *ty
 			statedb.AddBalance(params.OptimismL1FeeRecipient, gasFee.L1Fee)
 		}
 	}()
-	for _, txs := range levels {
-		for _, tx := range txs {
-			toConfirm := cq.queue[tx.txIndex]
-			result := toConfirm.result
-			delayGasFee := result.result.delayFees
-			if delayGasFee != nil {
-				if delayGasFee.TipFee != nil {
-					tipChan <- delayGasFee
-				}
-				if delayGasFee.BaseFee != nil {
-					baseChan <- delayGasFee
-				}
-				if delayGasFee.L1Fee != nil {
-					l1Chan <- delayGasFee
-				}
+	for _, tx := range level {
+		toConfirm := cq.queue[tx.txIndex]
+		result := toConfirm.result
+		delayGasFee := result.result.delayFees
+		if delayGasFee != nil {
+			if delayGasFee.TipFee != nil {
+				tipChan <- delayGasFee
+			}
+			if delayGasFee.BaseFee != nil {
+				baseChan <- delayGasFee
+			}
+			if delayGasFee.L1Fee != nil {
+				l1Chan <- delayGasFee
 			}
 		}
 	}

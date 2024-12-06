@@ -146,40 +146,38 @@ func (cq *confirmQueue) confirmWithUnordered(level TxLevel, execute func(*PEVMTx
 	return nil, 0
 }
 
-func (cq *confirmQueue) confirmParallel(levels []TxLevel, confirm func(*PEVMTxResult) error, afterParallelConfirm func(levels TxLevels, cq *confirmQueue) (err error)) (error, int) {
+func (cq *confirmQueue) confirmParallel(levels TxLevel, confirm func(*PEVMTxResult) error, afterParallelConfirm func(level TxLevel, cq *confirmQueue) (err error)) (error, int) {
 	var wg sync.WaitGroup
 	errs := make(chan []interface{}, len(levels))
+	start := time.Now()
+	for _, tx := range levels {
+		tempTx := tx
+		wg.Add(1)
+		run := func() {
+			defer wg.Done()
+			toConfirm := cq.queue[tempTx.txIndex]
+			if toConfirm.result == nil {
+				log.Warn("transaction should be executed, not result in queue", "index", tempTx.txIndex)
+				errs <- []interface{}{fmt.Errorf("transaction should be executed, not result in queue, index %d", tempTx.txIndex), tempTx.txIndex}
+				return
+			}
+			if toConfirm.executed != nil {
+				log.Error("transaction execute fail! we can not do parallel merge here", "err", toConfirm.executed, "index", tempTx.txIndex)
+				errs <- []interface{}{toConfirm.executed, tempTx.txIndex}
+				return
+			}
+			if err := confirm(toConfirm.result); err != nil {
+				log.Error("parallel merge fail!", "err", err, "index", tempTx.txIndex)
+				errs <- []interface{}{err, tempTx.txIndex}
+				return
+			}
+		}
+		runner <- run
+	}
 	go func() {
 		wg.Wait()
 		close(errs)
 	}()
-	start := time.Now()
-	for _, txs := range levels {
-		for _, tx := range txs {
-			tempTx := tx
-			wg.Add(1)
-			run := func() {
-				defer wg.Done()
-				toConfirm := cq.queue[tempTx.txIndex]
-				if toConfirm.result == nil {
-					log.Warn("transaction should be executed, not result in queue", "index", tempTx.txIndex)
-					errs <- []interface{}{fmt.Errorf("transaction should be executed, not result in queue, index %d", tempTx.txIndex), tempTx.txIndex}
-					return
-				}
-				if toConfirm.executed != nil {
-					log.Error("transaction execute fail! we can not do parallel merge here", "err", toConfirm.executed, "index", tempTx.txIndex)
-					errs <- []interface{}{toConfirm.executed, tempTx.txIndex}
-					return
-				}
-				if err := confirm(toConfirm.result); err != nil {
-					log.Error("parallel merge fail!", "err", err, "index", tempTx.txIndex)
-					errs <- []interface{}{err, tempTx.txIndex}
-					return
-				}
-			}
-			runner <- run
-		}
-	}
 	for err := range errs {
 		return err[0].(error), err[1].(int)
 	}
@@ -249,7 +247,7 @@ var goMaxProcs = runtime.GOMAXPROCS(0)
 
 // run runs the transactions in parallel
 // execute must return a non-nil result, otherwise it panics.
-func (tls TxLevels) Run(execute func(*PEVMTxRequest) *PEVMTxResult, confirm func(*PEVMTxResult) error, afterParallelConfirm func(levels TxLevels, cq *confirmQueue) (err error), unorderedMerge bool, parallelMerge bool) (error, int) {
+func (tls TxLevels) Run(execute func(*PEVMTxRequest) *PEVMTxResult, confirm func(*PEVMTxResult) error, afterParallelConfirm func(level TxLevel, cq *confirmQueue) (err error), unorderedMerge bool, parallelMerge bool) (error, int) {
 	toConfirm := &confirmQueue{
 		queue:     make([]confirmation, tls.txCount()),
 		confirmed: -1,
@@ -288,7 +286,7 @@ func (tls TxLevels) Run(execute func(*PEVMTxRequest) *PEVMTxResult, confirm func
 		start = time.Now()
 		// all transactions of current level are executed, now try to confirm.
 		if parallelMerge {
-			if err, txIndex := toConfirm.confirmParallel(trunks, confirm, afterParallelConfirm); err != nil {
+			if err, txIndex := toConfirm.confirmParallel(txLevel, confirm, afterParallelConfirm); err != nil {
 				return err, txIndex
 			}
 		} else if unorderedMerge {
