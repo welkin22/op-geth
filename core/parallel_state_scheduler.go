@@ -148,38 +148,38 @@ func (cq *confirmQueue) confirmWithUnordered(level TxLevel, execute func(*PEVMTx
 
 func (cq *confirmQueue) confirmParallel(levels []TxLevel, confirm func(*PEVMTxResult) error, afterParallelConfirm func(levels TxLevels, cq *confirmQueue) (err error)) (error, int) {
 	var wg sync.WaitGroup
-	wg.Add(len(levels))
 	errs := make(chan []interface{}, len(levels))
-	start := time.Now()
-	for _, txs := range levels {
-		temp := txs
-		run := func() {
-			defer wg.Done()
-			for _, tx := range temp {
-				toConfirm := cq.queue[tx.txIndex]
-				if toConfirm.result == nil {
-					log.Warn("transaction should be executed, not result in queue", "index", tx.txIndex)
-					errs <- []interface{}{fmt.Errorf("transaction should be executed, not result in queue, index %d", tx.txIndex), tx.txIndex}
-					return
-				}
-				if toConfirm.executed != nil {
-					log.Error("transaction execute fail! we can not do parallel merge here", "err", toConfirm.executed, "index", tx.txIndex)
-					errs <- []interface{}{toConfirm.executed, tx.txIndex}
-					return
-				}
-				if err := confirm(toConfirm.result); err != nil {
-					log.Error("parallel merge fail!", "err", err, "index", tx.txIndex)
-					errs <- []interface{}{err, tx.txIndex}
-					return
-				}
-			}
-		}
-		runner <- run
-	}
 	go func() {
 		wg.Wait()
 		close(errs)
 	}()
+	start := time.Now()
+	for _, txs := range levels {
+		for _, tx := range txs {
+			tempTx := tx
+			wg.Add(1)
+			run := func() {
+				defer wg.Done()
+				toConfirm := cq.queue[tempTx.txIndex]
+				if toConfirm.result == nil {
+					log.Warn("transaction should be executed, not result in queue", "index", tempTx.txIndex)
+					errs <- []interface{}{fmt.Errorf("transaction should be executed, not result in queue, index %d", tempTx.txIndex), tempTx.txIndex}
+					return
+				}
+				if toConfirm.executed != nil {
+					log.Error("transaction execute fail! we can not do parallel merge here", "err", toConfirm.executed, "index", tempTx.txIndex)
+					errs <- []interface{}{toConfirm.executed, tempTx.txIndex}
+					return
+				}
+				if err := confirm(toConfirm.result); err != nil {
+					log.Error("parallel merge fail!", "err", err, "index", tempTx.txIndex)
+					errs <- []interface{}{err, tempTx.txIndex}
+					return
+				}
+			}
+			runner <- run
+		}
+	}
 	for err := range errs {
 		return err[0].(error), err[1].(int)
 	}
