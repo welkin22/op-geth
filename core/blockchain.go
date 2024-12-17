@@ -1980,7 +1980,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 			}
 
 			// Enable prefetching to pull in trie node paths while processing transactions
-			statedb.StartPrefetcher("chain")
+			//statedb.StartPrefetcher("chain")
 			activeState = statedb
 
 			if bc.vmConfig.EnableParallelExec {
@@ -2031,7 +2031,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 						followupInterrupt.Store(true)
 						return it.index, err
 					}
-					statedb.StartPrefetcher("chain")
+					//statedb.StartPrefetcher("chain")
 					activeState = statedb
 					receipts, logs, usedGas, err = bc.serialProcessor.Process(block, statedb, bc.vmConfig)
 					blockProcessedInParallel = false
@@ -2063,7 +2063,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 					followupInterrupt.Store(true)
 					return it.index, err
 				}
-				statedb.StartPrefetcher("chain")
+				//statedb.StartPrefetcher("chain")
 				activeState = statedb
 				receipts, logs, usedGas, err = bc.serialProcessor.Process(block, statedb, bc.vmConfig)
 				if err != nil {
