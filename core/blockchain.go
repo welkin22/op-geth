@@ -1910,7 +1910,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 			}
 
 			// Enable prefetching to pull in trie node paths while processing transactions
-			statedb.StartPrefetcher("chain")
+			//statedb.StartPrefetcher("chain")
 			activeState = statedb
 
 			if bc.vmConfig.EnableParallelExec {
