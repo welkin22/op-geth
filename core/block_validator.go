@@ -19,6 +19,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/gopool"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -170,6 +171,9 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb state.StateDB
 
 	validateFuns := []func() error{
 		func() error {
+			defer func(start time.Time) {
+				blockValidationReceiptsBloomTimer.UpdateSince(start)
+			}(time.Now())
 			// Validate the received block's bloom with the one derived from the generated receipts.
 			// For valid blocks this should always validate to true.
 			rbloom := types.CreateBloom(receipts)
@@ -179,6 +183,9 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb state.StateDB
 			return nil
 		},
 		func() error {
+			defer func(start time.Time) {
+				blockValidationReceiptsHashTimer.UpdateSince(start)
+			}(time.Now())
 			// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, Rn]]))
 			receiptSha := types.DeriveSha(receipts, trie.NewStackTrie(nil))
 			if receiptSha != header.ReceiptHash {
@@ -187,6 +194,9 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb state.StateDB
 			return nil
 		},
 		func() error {
+			defer func(start time.Time) {
+				blockValidationRootTimer.UpdateSince(start)
+			}(time.Now())
 			// Validate the state root against the received state root and throw
 			// an error if they don't match.
 			if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {

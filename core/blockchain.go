@@ -85,10 +85,13 @@ var (
 
 	triedbCommitTimer = metrics.NewRegisteredTimer("chain/triedb/commits", nil)
 
-	blockInsertTimer     = metrics.NewRegisteredTimer("chain/inserts", nil)
-	blockValidationTimer = metrics.NewRegisteredTimer("chain/validation", nil)
-	blockExecutionTimer  = metrics.NewRegisteredTimer("chain/execution", nil)
-	blockWriteTimer      = metrics.NewRegisteredTimer("chain/write", nil)
+	blockInsertTimer                  = metrics.NewRegisteredTimer("chain/inserts", nil)
+	blockValidationTimer              = metrics.NewRegisteredTimer("chain/validation", nil)
+	blockValidationReceiptsBloomTimer = metrics.NewRegisteredTimer("chain/validation/bloom", nil)
+	blockValidationReceiptsHashTimer  = metrics.NewRegisteredTimer("chain/validation/hash", nil)
+	blockValidationRootTimer          = metrics.NewRegisteredTimer("chain/validation/root", nil)
+	blockExecutionTimer               = metrics.NewRegisteredTimer("chain/execution", nil)
+	blockWriteTimer                   = metrics.NewRegisteredTimer("chain/write", nil)
 
 	blockWriteExternalTimer   = metrics.NewRegisteredTimer("chain/block/write/external", nil)
 	stateCommitExternalTimer  = metrics.NewRegisteredTimer("chain/state/commit/external", nil)
