@@ -1049,6 +1049,9 @@ type ParallelStateDB struct {
 	TrieCommits          time.Duration
 	CodeCommits          time.Duration
 	TxDAGGenerate        time.Duration
+	FinalizeInRootTime   time.Duration
+	AccountRootTime      time.Duration
+	StateRootTime        time.Duration
 
 	AccountUpdated int
 	StorageUpdated int
@@ -1547,9 +1550,16 @@ func (p *ParallelStateDB) ResolveStats() map[int]*types.ExeStat {
 
 func (p *ParallelStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// Finalise all the dirty storage states and write them into the tries
+	start := time.Now()
 	p.Finalise(deleteEmptyObjects)
+	p.FinalizeInRootTime = time.Since(start)
+	start = time.Now()
 	p.AccountsIntermediateRoot()
-	return p.StateIntermediateRoot()
+	p.AccountRootTime = time.Since(start)
+	start = time.Now()
+	result := p.StateIntermediateRoot()
+	p.StateRootTime = time.Since(start)
+	return result
 }
 
 func (p *ParallelStateDB) Error() error {
@@ -1573,6 +1583,9 @@ func (p *ParallelStateDB) Timers() *Timers {
 		TrieCommits:          p.TrieCommits,
 		CodeCommits:          p.CodeCommits,
 		TxDAGGenerate:        p.TxDAGGenerate,
+		FinalizeInRootTime:   p.FinalizeInRootTime,
+		AccountRootTime:      p.AccountRootTime,
+		StateRootTime:        p.StateRootTime,
 	}
 }
 

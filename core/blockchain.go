@@ -90,6 +90,10 @@ var (
 	blockValidationReceiptsBloomTimer = metrics.NewRegisteredTimer("chain/validation/bloom", nil)
 	blockValidationReceiptsHashTimer  = metrics.NewRegisteredTimer("chain/validation/hash", nil)
 	blockValidationRootTimer          = metrics.NewRegisteredTimer("chain/validation/root", nil)
+	blockStateFinalizeTimer           = metrics.NewRegisteredTimer("chain/state/finalize", nil)
+	blockStateFinalizeInRootTimer     = metrics.NewRegisteredTimer("chain/root/finalize", nil)
+	blockAccountRootTimer             = metrics.NewRegisteredTimer("chain/root/account", nil)
+	blockStateRootTimer               = metrics.NewRegisteredTimer("chain/root/state", nil)
 	blockExecutionTimer               = metrics.NewRegisteredTimer("chain/execution", nil)
 	blockWriteTimer                   = metrics.NewRegisteredTimer("chain/write", nil)
 
@@ -2062,6 +2066,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 		accountHashTimer.Update(timers.AccountHashes)                // Account hashes are complete(in validation)
 		storageHashTimer.Update(timers.StorageHashes)                // Storage hashes are complete(in validation)
 		txDAGGenerateTimer.Update(timers.TxDAGGenerate)
+		blockStateFinalizeInRootTimer.Update(timers.FinalizeInRootTime)
+		blockAccountRootTimer.Update(timers.AccountRootTime)
+		blockStateRootTimer.Update(timers.StateRootTime)
 		blockExecutionTimer.Update(ptime)  // The time spent on block execution
 		blockValidationTimer.Update(vtime) // The time spent on block validation
 

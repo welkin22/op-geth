@@ -417,7 +417,9 @@ func (p *PEVMProcessor) afterParallelConfirm(statedb state.StateDBer, header *ty
 	}
 	isEIP158 := p.config.IsEIP158(header.Number)
 
+	start := time.Now()
 	statedb.Finalise(isByzantium || isEIP158)
+	blockStateFinalizeTimer.UpdateSince(start)
 
 	return nil
 }

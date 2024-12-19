@@ -248,6 +248,9 @@ type Timers struct {
 	TrieCommits          time.Duration
 	CodeCommits          time.Duration
 	TxDAGGenerate        time.Duration
+	FinalizeInRootTime   time.Duration
+	AccountRootTime      time.Duration
+	StateRootTime        time.Duration
 }
 
 // New creates a new state from a given trie.
