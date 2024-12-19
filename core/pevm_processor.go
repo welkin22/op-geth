@@ -173,7 +173,9 @@ func (p *PEVMProcessor) confirmTxResult(statedb *state.StateDB, gp *GasPool, res
 		log.Error("merge slotDB failed", "err", err)
 		return err
 	}
+	start := time.Now()
 	result.slotDB.Finalise(isByzantium || isEIP158)
+	blockStateFinalizeTimer.UpdateSince(start)
 
 	delayGasFee := result.result.delayFees
 	// add delayed gas fee

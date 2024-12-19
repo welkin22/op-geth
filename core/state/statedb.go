@@ -270,6 +270,9 @@ type StateDB struct {
 	TrieCommits          time.Duration
 	CodeCommits          time.Duration
 	TxDAGGenerate        time.Duration
+	FinalizeInRootTime   time.Duration
+	AccountRootTime      time.Duration
+	StateRootTime        time.Duration
 
 	AccountUpdated int
 	StorageUpdated int
@@ -1324,9 +1327,16 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // TODO: For parallel SlotDB, IntermediateRootForSlot is used, need to clean up this method.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// Finalise all the dirty storage states and write them into the tries
+	start := time.Now()
 	s.Finalise(deleteEmptyObjects)
+	s.FinalizeInRootTime = time.Since(start)
+	start = time.Now()
 	s.AccountsIntermediateRoot()
-	return s.StateIntermediateRoot()
+	s.AccountRootTime = time.Since(start)
+	start = time.Now()
+	result := s.StateIntermediateRoot()
+	s.StateRootTime = time.Since(start)
+	return result
 }
 
 func (s *StateDB) AccountsIntermediateRoot() {
