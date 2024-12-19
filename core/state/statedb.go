@@ -1436,6 +1436,8 @@ func (s *StateDB) StateIntermediateRoot() common.Hash {
 		s.trie = tr
 	}
 
+	objectPendingMeter.Mark(int64(len(s.stateObjectsPending)))
+
 	usedAddrs := make([][]byte, 0, len(s.stateObjectsPending))
 
 	for addr := range s.stateObjectsPending {

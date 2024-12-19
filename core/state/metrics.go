@@ -23,6 +23,7 @@ var (
 	storageUpdatedMeter      = metrics.NewRegisteredMeter("state/update/storage", nil)
 	accountDeletedMeter      = metrics.NewRegisteredMeter("state/delete/account", nil)
 	storageDeletedMeter      = metrics.NewRegisteredMeter("state/delete/storage", nil)
+	objectPendingMeter       = metrics.NewRegisteredMeter("state/object/pending", nil)
 	accountTrieUpdatedMeter  = metrics.NewRegisteredMeter("state/update/accountnodes", nil)
 	storageTriesUpdatedMeter = metrics.NewRegisteredMeter("state/update/storagenodes", nil)
 	accountTrieDeletedMeter  = metrics.NewRegisteredMeter("state/delete/accountnodes", nil)
