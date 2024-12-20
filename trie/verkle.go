@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -214,6 +215,10 @@ func (t *VerkleTrie) DeleteStorage(addr common.Address, key []byte) error {
 // can be used even if the tree doesn't have one.
 func (t *VerkleTrie) Hash() common.Hash {
 	return t.root.Commit().Bytes()
+}
+
+func (t *VerkleTrie) GetUpdateTime() time.Duration {
+	return 0
 }
 
 // Commit writes all nodes to the tree's memory database.

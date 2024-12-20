@@ -35,6 +35,7 @@ var (
 	trieGetTimer         = metrics.NewRegisteredTimer("trie/get/time", nil)
 	trieReaderGetTimer   = metrics.NewRegisteredTimer("trie/reader/get/time", nil)
 	trieReaderTotalTimer = metrics.NewRegisteredTimer("trie/reader/total/time", nil)
+	trieLoadDBCounter    = metrics.NewRegisteredMeter("trie/load/db", nil)
 )
 
 // Trie is a Merkle Patricia Trie. Use New to create a trie that sits on
@@ -407,6 +408,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 		// We've hit a part of the trie that isn't loaded yet. Load
 		// the node and insert into it. This leaves all child nodes on
 		// the path to the value in the trie.
+		trieLoadDBCounter.Mark(1)
 		rn, err := t.resolveAndTrack(n, prefix)
 		if err != nil {
 			return false, nil, err
@@ -568,6 +570,7 @@ func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
 		// We've hit a part of the trie that isn't loaded yet. Load
 		// the node and delete from it. This leaves all child nodes on
 		// the path to the value in the trie.
+		trieLoadDBCounter.Mark(1)
 		rn, err := t.resolveAndTrack(n, prefix)
 		if err != nil {
 			return false, nil, err

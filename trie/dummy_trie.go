@@ -17,6 +17,8 @@
 package trie
 
 import (
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -65,6 +67,10 @@ func (t *EmptyTrie) DeleteAccount(address common.Address) error {
 
 func (t *EmptyTrie) Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet, error) {
 	return common.Hash{}, nil, nil
+}
+
+func (t *EmptyTrie) GetUpdateTime() time.Duration {
+	return 0
 }
 
 func (t *EmptyTrie) Hash() common.Hash {
