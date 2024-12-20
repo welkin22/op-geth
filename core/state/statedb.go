@@ -233,24 +233,27 @@ type StateDB struct {
 
 type Timers struct {
 	// Measurements gathered during execution for debugging purposes
-	AccountReads         time.Duration
-	AccountHashes        time.Duration
-	AccountUpdates       time.Duration
-	AccountCommits       time.Duration
-	StorageReads         time.Duration
-	StorageHashes        time.Duration
-	StorageUpdates       time.Duration
-	StorageCommits       time.Duration
-	SnapshotAccountReads time.Duration
-	SnapshotStorageReads time.Duration
-	SnapshotCommits      time.Duration
-	TrieDBCommits        time.Duration
-	TrieCommits          time.Duration
-	CodeCommits          time.Duration
-	TxDAGGenerate        time.Duration
-	FinalizeInRootTime   time.Duration
-	AccountRootTime      time.Duration
-	StateRootTime        time.Duration
+	AccountReads           time.Duration
+	AccountHashes          time.Duration
+	AccountUpdates         time.Duration
+	AccountTrieUpdates     time.Duration
+	AccountOriginUpdates   time.Duration
+	AccountTrieUpdateInner time.Duration
+	AccountCommits         time.Duration
+	StorageReads           time.Duration
+	StorageHashes          time.Duration
+	StorageUpdates         time.Duration
+	StorageCommits         time.Duration
+	SnapshotAccountReads   time.Duration
+	SnapshotStorageReads   time.Duration
+	SnapshotCommits        time.Duration
+	TrieDBCommits          time.Duration
+	TrieCommits            time.Duration
+	CodeCommits            time.Duration
+	TxDAGGenerate          time.Duration
+	FinalizeInRootTime     time.Duration
+	AccountRootTime        time.Duration
+	StateRootTime          time.Duration
 }
 
 // New creates a new state from a given trie.

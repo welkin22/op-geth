@@ -17,6 +17,8 @@
 package trie
 
 import (
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -55,6 +57,7 @@ type StateTrie struct {
 	hashKeyBuf       [common.HashLength]byte
 	secKeyCache      map[string][]byte
 	secKeyCacheOwner *StateTrie // Pointer to self, replace the key cache on mismatch
+	trieUpdateTimer  time.Duration
 }
 
 // NewStateTrie creates a trie with an existing root node from a backing database.
@@ -192,9 +195,11 @@ func (t *StateTrie) UpdateAccount(address common.Address, acc *types.StateAccoun
 	if err != nil {
 		return err
 	}
+	start := time.Now()
 	if err := t.trie.Update(hk, data); err != nil {
 		return err
 	}
+	t.trieUpdateTimer += time.Since(start)
 	t.getSecKeyCache()[string(hk)] = address.Bytes()
 	return nil
 }
@@ -255,6 +260,10 @@ func (t *StateTrie) Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet, er
 	}
 	// Commit the trie and return its modified nodeset.
 	return t.trie.Commit(collectLeaf)
+}
+
+func (t *StateTrie) GetUpdateTime() time.Duration {
+	return t.trieUpdateTimer
 }
 
 // Hash returns the root hash of StateTrie. It does not write to the

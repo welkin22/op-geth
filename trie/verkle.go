@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -233,6 +234,10 @@ func (t *VerkleTrie) Commit(_ bool) (common.Hash, *trienode.NodeSet, error) {
 	}
 	// Serialize root commitment form
 	return t.Hash(), nodeset, nil
+}
+
+func (t *VerkleTrie) GetUpdateTime() time.Duration {
+	return 0
 }
 
 // NodeIterator implements state.Trie, returning an iterator that returns

@@ -1034,24 +1034,27 @@ type ParallelStateDB struct {
 	accessList *parallelAccessList
 
 	// Measurements gathered during execution for debugging purposes
-	AccountReads         time.Duration
-	AccountHashes        time.Duration
-	AccountUpdates       time.Duration
-	AccountCommits       time.Duration
-	StorageReads         time.Duration
-	StorageHashes        time.Duration
-	StorageUpdates       time.Duration
-	StorageCommits       time.Duration
-	SnapshotAccountReads time.Duration
-	SnapshotStorageReads time.Duration
-	SnapshotCommits      time.Duration
-	TrieDBCommits        time.Duration
-	TrieCommits          time.Duration
-	CodeCommits          time.Duration
-	TxDAGGenerate        time.Duration
-	FinalizeInRootTime   time.Duration
-	AccountRootTime      time.Duration
-	StateRootTime        time.Duration
+	AccountReads           time.Duration
+	AccountHashes          time.Duration
+	AccountUpdates         time.Duration
+	AccountTrieUpdates     time.Duration
+	AccountOriginUpdates   time.Duration
+	AccountTrieUpdateInner time.Duration
+	AccountCommits         time.Duration
+	StorageReads           time.Duration
+	StorageHashes          time.Duration
+	StorageUpdates         time.Duration
+	StorageCommits         time.Duration
+	SnapshotAccountReads   time.Duration
+	SnapshotStorageReads   time.Duration
+	SnapshotCommits        time.Duration
+	TrieDBCommits          time.Duration
+	TrieCommits            time.Duration
+	CodeCommits            time.Duration
+	TxDAGGenerate          time.Duration
+	FinalizeInRootTime     time.Duration
+	AccountRootTime        time.Duration
+	StateRootTime          time.Duration
 
 	AccountUpdated int
 	StorageUpdated int
@@ -1568,24 +1571,27 @@ func (p *ParallelStateDB) Error() error {
 
 func (p *ParallelStateDB) Timers() *Timers {
 	return &Timers{
-		AccountReads:         p.AccountReads,
-		AccountHashes:        p.AccountHashes,
-		AccountUpdates:       p.AccountUpdates,
-		AccountCommits:       p.AccountCommits,
-		StorageReads:         p.StorageReads,
-		StorageHashes:        p.StorageHashes,
-		StorageUpdates:       p.StorageUpdates,
-		StorageCommits:       p.StorageCommits,
-		SnapshotAccountReads: p.SnapshotAccountReads,
-		SnapshotStorageReads: p.SnapshotStorageReads,
-		SnapshotCommits:      p.SnapshotCommits,
-		TrieDBCommits:        p.TrieDBCommits,
-		TrieCommits:          p.TrieCommits,
-		CodeCommits:          p.CodeCommits,
-		TxDAGGenerate:        p.TxDAGGenerate,
-		FinalizeInRootTime:   p.FinalizeInRootTime,
-		AccountRootTime:      p.AccountRootTime,
-		StateRootTime:        p.StateRootTime,
+		AccountReads:           p.AccountReads,
+		AccountHashes:          p.AccountHashes,
+		AccountUpdates:         p.AccountUpdates,
+		AccountTrieUpdates:     p.AccountTrieUpdates,
+		AccountOriginUpdates:   p.AccountOriginUpdates,
+		AccountTrieUpdateInner: p.AccountTrieUpdateInner,
+		AccountCommits:         p.AccountCommits,
+		StorageReads:           p.StorageReads,
+		StorageHashes:          p.StorageHashes,
+		StorageUpdates:         p.StorageUpdates,
+		StorageCommits:         p.StorageCommits,
+		SnapshotAccountReads:   p.SnapshotAccountReads,
+		SnapshotStorageReads:   p.SnapshotStorageReads,
+		SnapshotCommits:        p.SnapshotCommits,
+		TrieDBCommits:          p.TrieDBCommits,
+		TrieCommits:            p.TrieCommits,
+		CodeCommits:            p.CodeCommits,
+		TxDAGGenerate:          p.TxDAGGenerate,
+		FinalizeInRootTime:     p.FinalizeInRootTime,
+		AccountRootTime:        p.AccountRootTime,
+		StateRootTime:          p.StateRootTime,
 	}
 }
 
@@ -2050,6 +2056,7 @@ func (p *ParallelStateDB) StateIntermediateRoot() common.Hash {
 		}
 		usedAddrs = append(usedAddrs, common.CopyBytes(addr[:])) // Copy needed for closure
 	}
+	p.AccountTrieUpdateInner += p.trie.GetUpdateTime()
 
 	if prefetcher != nil {
 		prefetcher.used(common.Hash{}, p.originalRoot, usedAddrs)
@@ -2304,6 +2311,7 @@ func (p *ParallelStateDB) updateStateObject(obj *stateObject) {
 		if metrics.EnabledExpensive {
 			defer func(start time.Time) { p.AccountUpdates += time.Since(start) }(time.Now())
 		}
+		start := time.Now()
 		// Encode the account and update the account trie
 		addr := obj.Address()
 		p.trieParallelLock.Lock()
@@ -2314,8 +2322,12 @@ func (p *ParallelStateDB) updateStateObject(obj *stateObject) {
 			p.trie.UpdateContractCode(obj.Address(), common.BytesToHash(obj.CodeHash()), obj.code)
 		}
 		p.trieParallelLock.Unlock()
+		p.AccountTrieUpdates += time.Since(start)
 	}
 
+	defer func(start time.Time) {
+		p.AccountOriginUpdates += time.Since(start)
+	}(time.Now())
 	p.AccountMux.Lock()
 	defer p.AccountMux.Unlock()
 	// Cache the data until commit. Note, this update mechanism is not symmetric
