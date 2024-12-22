@@ -175,29 +175,27 @@ func (p *PEVMProcessor) confirmTxResult(statedb state.StateDBer, gp *ParallelGas
 		return err
 	}
 
-	if !enableParallelMerge {
-		delayGasFee := result.result.delayFees
-		// add delayed gas fee
-		if delayGasFee != nil {
-			if delayGasFee.TipFee != nil {
-				statedb.AddBalance(delayGasFee.Coinbase, delayGasFee.TipFee)
-			}
-			if delayGasFee.BaseFee != nil {
-				statedb.AddBalance(params.OptimismBaseFeeRecipient, delayGasFee.BaseFee)
-			}
-			if delayGasFee.L1Fee != nil {
-				statedb.AddBalance(params.OptimismL1FeeRecipient, delayGasFee.L1Fee)
-			}
+	delayGasFee := result.result.delayFees
+	// add delayed gas fee
+	if delayGasFee != nil {
+		if delayGasFee.TipFee != nil {
+			statedb.AddBalance(delayGasFee.Coinbase, delayGasFee.TipFee)
 		}
-		var root []byte
-		result.slotDB.Finalise(isByzantium || isEIP158)
-
-		// Do IntermediateRoot after mergeSlotDB.
-		if !isByzantium {
-			root = statedb.IntermediateRoot(isEIP158).Bytes()
+		if delayGasFee.BaseFee != nil {
+			statedb.AddBalance(params.OptimismBaseFeeRecipient, delayGasFee.BaseFee)
 		}
-		result.receipt.PostState = root
+		if delayGasFee.L1Fee != nil {
+			statedb.AddBalance(params.OptimismL1FeeRecipient, delayGasFee.L1Fee)
+		}
 	}
+	var root []byte
+	result.slotDB.Finalise(isByzantium || isEIP158)
+
+	// Do IntermediateRoot after mergeSlotDB.
+	if !isByzantium {
+		root = statedb.IntermediateRoot(isEIP158).Bytes()
+	}
+	result.receipt.PostState = root
 	p.receipts[result.txReq.txIndex] = result.receipt
 	p.commonTxs[result.txReq.txIndex] = result.txReq.tx
 	return nil
@@ -292,7 +290,7 @@ func (p *PEVMProcessor) Process(block *types.Block, statedb state.StateDBer, cfg
 			atomic.AddInt64(&confirmDurations, time.Since(t0).Nanoseconds())
 		}(time.Now())
 		log.Debug("after parallel confirm")
-		return p.afterParallelConfirm(statedb, block.Header(), levels, cq)
+		return nil
 	}, p.unorderedMerge, enableParallelMerge)
 	parallelRunDuration := time.Since(start) - buildLevelsDuration
 	if err != nil {
