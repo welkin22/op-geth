@@ -12,6 +12,7 @@ import (
 )
 
 var runner chan func()
+var justOneRunner chan func()
 var runnerOnce sync.Once
 
 func initParallelRunner(targetNum int) {
@@ -20,6 +21,7 @@ func initParallelRunner(targetNum int) {
 			targetNum = runtime.GOMAXPROCS(0)
 		}
 		runner = make(chan func(), targetNum)
+		justOneRunner = make(chan func(), 1)
 		for i := 0; i < targetNum; i++ {
 			go func() {
 				for f := range runner {
@@ -27,6 +29,11 @@ func initParallelRunner(targetNum int) {
 				}
 			}()
 		}
+		go func() {
+			for f := range justOneRunner {
+				f()
+			}
+		}()
 	})
 }
 
@@ -174,7 +181,7 @@ func (cq *confirmQueue) confirmParallel(levels []TxLevel, confirm func(*PEVMTxRe
 				}
 			}
 		}
-		runner <- run
+		justOneRunner <- run
 	}
 	go func() {
 		wg.Wait()
