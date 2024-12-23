@@ -388,6 +388,9 @@ func (p *PEVMProcessor) afterParallelConfirm(statedb state.StateDBer, header *ty
 			statedb.AddBalance(params.OptimismL1FeeRecipient, gasFee.L1Fee)
 		}
 	}()
+	isTipPrefetch := false
+	isBasePrefetch := false
+	isL1Prefetch := false
 	for _, txs := range levels {
 		for _, tx := range txs {
 			toConfirm := cq.queue[tx.txIndex]
@@ -396,12 +399,24 @@ func (p *PEVMProcessor) afterParallelConfirm(statedb state.StateDBer, header *ty
 			if delayGasFee != nil {
 				if delayGasFee.TipFee != nil {
 					tipChan <- delayGasFee
+					if !isTipPrefetch {
+						statedb.PrefetchAccount(delayGasFee.Coinbase)
+						isTipPrefetch = true
+					}
 				}
 				if delayGasFee.BaseFee != nil {
 					baseChan <- delayGasFee
+					if !isBasePrefetch {
+						statedb.PrefetchAccount(params.OptimismBaseFeeRecipient)
+						isBasePrefetch = true
+					}
 				}
 				if delayGasFee.L1Fee != nil {
 					l1Chan <- delayGasFee
+					if !isL1Prefetch {
+						statedb.PrefetchAccount(params.OptimismL1FeeRecipient)
+						isL1Prefetch = true
+					}
 				}
 			}
 		}

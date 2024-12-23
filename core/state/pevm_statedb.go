@@ -801,7 +801,7 @@ func (s state) merge(maindb StateDBer, prefetch bool) {
 	if s.modified&ModifySelfDestruct != 0 {
 		maindb.SelfDestruct(s.addr)
 		if prefetch {
-			maindb.prefetchAccount(s.addr)
+			maindb.PrefetchAccount(s.addr)
 		}
 		return
 	}
@@ -830,7 +830,7 @@ func (s state) merge(maindb StateDBer, prefetch bool) {
 		//TODO: should we reset all kv pairs if the s.state == nil ?
 	}
 	if hasModified && prefetch {
-		maindb.prefetchAccount(obj.address)
+		maindb.PrefetchAccount(obj.address)
 	}
 }
 
@@ -1454,7 +1454,7 @@ func (p *ParallelStateDB) setStateObject(object *stateObject) {
 	p.stateObjects.Store(object.address, object)
 }
 
-func (p *ParallelStateDB) prefetchAccount(address common.Address) {
+func (p *ParallelStateDB) PrefetchAccount(address common.Address) {
 	if p.prefetcher == nil {
 		return
 	}
