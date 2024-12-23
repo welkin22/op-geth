@@ -114,6 +114,9 @@ func (pst *UncommittedDB) CreateAccount(addr common.Address) {
 	if obj != nil {
 		pst.cache[addr].balance.Set(obj.balance)
 	}
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchAccount(addr)
+	}
 }
 
 // Prepare handles the preparatory steps for executing a state transition with.
@@ -173,6 +176,9 @@ func (pst *UncommittedDB) SubBalance(addr common.Address, amount *uint256.Int) {
 	obj := pst.getOrNewObject(addr)
 	newb := new(uint256.Int).Sub(obj.balance, amount)
 	pst.cache.setBalance(addr, newb)
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchAccount(addr)
+	}
 }
 
 func (pst *UncommittedDB) AddBalance(addr common.Address, amount *uint256.Int) {
@@ -180,6 +186,9 @@ func (pst *UncommittedDB) AddBalance(addr common.Address, amount *uint256.Int) {
 	obj := pst.getOrNewObject(addr)
 	newb := new(uint256.Int).Add(obj.balance, amount)
 	pst.cache.setBalance(addr, newb)
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchAccount(addr)
+	}
 }
 
 func (pst *UncommittedDB) GetBalance(addr common.Address) *uint256.Int {
@@ -200,6 +209,9 @@ func (pst *UncommittedDB) SetNonce(addr common.Address, nonce uint64) {
 	pst.journal.append(newJNonce(pst.cache[addr], addr))
 	pst.getOrNewObject(addr)
 	pst.cache.setNonce(addr, nonce)
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchAccount(addr)
+	}
 }
 
 func (pst *UncommittedDB) GetCodeHash(addr common.Address) common.Hash {
@@ -233,6 +245,9 @@ func (pst *UncommittedDB) SetCode(addr common.Address, code []byte) {
 		pst.cache.create(addr)
 	}
 	pst.cache.setCode(addr, code)
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchAccount(addr)
+	}
 }
 
 func (pst *UncommittedDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
@@ -254,8 +269,14 @@ func (pst *UncommittedDB) SetState(addr common.Address, key, value common.Hash) 
 	if obj := pst.getDeletedObjectWithState(addr, pst.maindb, key); obj == nil || obj.deleted {
 		pst.journal.append(newJCreateAccount(pst.cache[addr], addr))
 		pst.cache.create(addr)
+		if pst.isMainDBIsParallelDB {
+			pst.maindb.prefetchAccount(addr)
+		}
 	}
 	pst.cache.setState(addr, key, value)
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchStorage(addr, key, value)
+	}
 }
 
 func (pst *UncommittedDB) SelfDestruct(addr common.Address) {
@@ -264,6 +285,9 @@ func (pst *UncommittedDB) SelfDestruct(addr common.Address) {
 		return
 	}
 	pst.cache.selfDestruct(addr)
+	if pst.isMainDBIsParallelDB {
+		pst.maindb.prefetchAccount(addr)
+	}
 }
 
 func (pst *UncommittedDB) HasSelfDestructed(addr common.Address) bool {
@@ -537,7 +561,7 @@ func (pst *UncommittedDB) Merge(deleteEmptyObjects bool) error {
 	}
 	// 3. merge logs writes
 	for _, st := range pst.cache {
-		st.merge(pst.maindb, pst.isMainDBIsParallelDB)
+		st.merge(pst.maindb)
 	}
 	// 4. merge object states
 	for _, log := range pst.logs {
@@ -793,44 +817,30 @@ func (s state) conflicts(maindb *StateDB) error {
 	return nil
 }
 
-func (s state) merge(maindb StateDBer, prefetch bool) {
+func (s state) merge(maindb StateDBer) {
 	// 1. merge the balance
 	// 2. merge the nonce
 	// 3. merge the code
 	// 4. merge the state
 	if s.modified&ModifySelfDestruct != 0 {
 		maindb.SelfDestruct(s.addr)
-		if prefetch {
-			maindb.prefetchAccount(s.addr)
-		}
 		return
 	}
-	hasModified := false
 	obj := maindb.getOrNewStateObject(s.addr)
 	if s.modified&ModifyBalance != 0 {
 		obj.SetBalance(s.balance)
-		hasModified = true
 	}
 	if s.modified&ModifyNonce != 0 {
 		obj.SetNonce(s.nonce)
-		hasModified = true
 	}
 	if s.modified&ModifyCode != 0 {
 		obj.SetCode(common.BytesToHash(s.codeHash), s.code)
-		hasModified = true
 	}
 	if s.modified&ModifyState != 0 {
 		for key, val := range s.state {
 			obj.SetState(key, val)
-			if prefetch {
-				obj.prefetchStorage(key, val)
-			}
 		}
-		hasModified = true
 		//TODO: should we reset all kv pairs if the s.state == nil ?
-	}
-	if hasModified && prefetch {
-		maindb.prefetchAccount(obj.address)
 	}
 }
 
@@ -983,7 +993,7 @@ func (wst writes) selfDestruct(addr common.Address) {
 
 func (wst writes) merge(maindb *StateDB) {
 	for _, st := range wst {
-		st.merge(maindb, false)
+		st.merge(maindb)
 	}
 }
 
@@ -1200,6 +1210,13 @@ func (p *ParallelStateDB) GetCodeSize(addr common.Address) int {
 		return stateObject.CodeSize()
 	}
 	return 0
+}
+
+func (p *ParallelStateDB) prefetchStorage(address common.Address, key common.Hash, value common.Hash) {
+	object := p.getDeletedStateObject(address)
+	if object != nil {
+		object.prefetchStorage(key, value)
+	}
 }
 
 func (p *ParallelStateDB) AddRefund(gas uint64) {

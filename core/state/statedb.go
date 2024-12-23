@@ -1382,6 +1382,10 @@ func (s *StateDB) clearJournalAndRefund() {
 	s.validRevisions = s.validRevisions[:0] // Snapshots can be created without journal entries
 }
 
+func (s *StateDB) prefetchStorage(address common.Address, key common.Hash, value common.Hash) {
+	panic("stateDB not support prefetchStorage")
+}
+
 // fastDeleteStorage is the function that efficiently deletes the storage trie
 // of a specific account. It leverages the associated state snapshot for fast
 // storage iteration and constructs trie node deletion markers by creating
