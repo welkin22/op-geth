@@ -12,6 +12,7 @@ import (
 )
 
 var runner chan func()
+var halfRunner chan func()
 var runnerOnce sync.Once
 
 func initParallelRunner(targetNum int) {
@@ -20,9 +21,18 @@ func initParallelRunner(targetNum int) {
 			targetNum = runtime.GOMAXPROCS(0)
 		}
 		runner = make(chan func(), targetNum)
+		halfTargetNum := targetNum / 2
+		halfRunner = make(chan func(), halfTargetNum)
 		for i := 0; i < targetNum; i++ {
 			go func() {
 				for f := range runner {
+					f()
+				}
+			}()
+		}
+		for i := 0; i < halfTargetNum; i++ {
+			go func() {
+				for f := range halfRunner {
 					f()
 				}
 			}()
@@ -36,6 +46,10 @@ func InitPevmRunner(targetNum int) {
 
 func ParallelNum() int {
 	return cap(runner)
+}
+
+func HalfParallelNum() int {
+	return cap(halfRunner)
 }
 
 // TxLevel contains all transactions who are independent to each other
@@ -174,7 +188,7 @@ func (cq *confirmQueue) confirmParallel(levels []TxLevel, confirm func(*PEVMTxRe
 				}
 			}
 		}
-		runner <- run
+		halfRunner <- run
 	}
 	go func() {
 		wg.Wait()
@@ -288,7 +302,7 @@ func (tls TxLevels) Run(execute func(*PEVMTxRequest) *PEVMTxResult, confirm func
 		start = time.Now()
 		// all transactions of current level are executed, now try to confirm.
 		if parallelMerge {
-			if err, txIndex := toConfirm.confirmParallel(trunks, confirm, afterParallelConfirm); err != nil {
+			if err, txIndex := toConfirm.confirmParallel(txLevel.Split(HalfParallelNum()), confirm, afterParallelConfirm); err != nil {
 				return err, txIndex
 			}
 		} else if unorderedMerge {
