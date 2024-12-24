@@ -1952,7 +1952,7 @@ func (p *ParallelStateDB) Finalise(deleteEmptyObjects bool) {
 					delete(p.storagesOrigin, obj.address)
 					p.StorageMux.Unlock()
 				} else {
-					obj.finalise(true) // Prefetch slots in the background
+					obj.parallelFinalise(true) // Prefetch slots in the background
 				}
 
 				obj.created = false

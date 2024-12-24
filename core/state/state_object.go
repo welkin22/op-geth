@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/gopool"
 	"github.com/ethereum/go-ethereum/core/opcodeCompiler/compiler"
 	"golang.org/x/exp/slices"
 
@@ -435,6 +436,75 @@ func (s *stateObject) finalise(prefetch bool) {
 		}
 		return true
 	})
+	if s.dirtyNonce != nil {
+		s.data.Nonce = *s.dirtyNonce
+		s.dirtyNonce = nil
+	}
+	if s.dirtyBalance != nil {
+		s.data.Balance = s.dirtyBalance
+		s.dirtyBalance = nil
+	}
+	if s.dirtyCodeHash != nil {
+		s.data.CodeHash = s.dirtyCodeHash
+		s.dirtyCodeHash = nil
+	}
+	if s.dbItf.getPrefetcher() != nil && prefetch && len(slotsToPrefetch) > 0 && s.data.Root != types.EmptyRootHash {
+		s.dbItf.getTrieParallelLock().Lock()
+		s.dbItf.getPrefetcher().prefetch(s.addrHash, s.data.Root, s.address, slotsToPrefetch)
+		s.dbItf.getTrieParallelLock().Unlock()
+	}
+	if s.dirtyStorage.Length() > 0 {
+		s.dirtyStorage = newStorage(s.isParallel)
+	}
+}
+
+type dirtyKeyV struct {
+	key   common.Hash
+	value common.Hash
+}
+
+func (s *stateObject) parallelFinalise(prefetch bool) {
+	s.dirtyStorageLock.Lock()
+	defer s.dirtyStorageLock.Unlock()
+	slotsToPrefetch := make([][]byte, 0, 16)
+	runnerCount := goMaxProcs / 2
+	dirtyChan := make(chan *dirtyKeyV, runnerCount)
+	go func() {
+		s.dirtyStorage.Range(func(key, value interface{}) bool {
+			dirtyChan <- &dirtyKeyV{key: key.(common.Hash), value: value.(common.Hash)}
+			return true
+		})
+		close(dirtyChan)
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.dirtyStorage.Range(func(key, value interface{}) bool {
+			originalValue, _ := s.originStorage.GetValue(key.(common.Hash))
+			if value.(common.Hash) != originalValue && prefetch {
+				originalKey := key.(common.Hash)
+				slotsToPrefetch = append(slotsToPrefetch, common.CopyBytes(originalKey[:])) // Copy needed for closure
+			}
+			return true
+		})
+	}()
+	wg.Add(runnerCount)
+	for i := 0; i < runnerCount; i++ {
+		gopool.Submit(func() {
+			defer wg.Done()
+			for {
+				keyv, open := <-dirtyChan
+				if !open {
+					return
+				}
+				s.pendingStorage.StoreValue(keyv.key, keyv.value)
+			}
+		})
+	}
+	wg.Wait()
+
 	if s.dirtyNonce != nil {
 		s.data.Nonce = *s.dirtyNonce
 		s.dirtyNonce = nil
