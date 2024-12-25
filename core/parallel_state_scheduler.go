@@ -288,8 +288,19 @@ func (tls TxLevels) Run(execute func(*PEVMTxRequest) *PEVMTxResult, confirm func
 		start = time.Now()
 		// all transactions of current level are executed, now try to confirm.
 		if parallelMerge {
-			if err, txIndex := toConfirm.confirmParallel(trunks, confirm, afterParallelConfirm); err != nil {
-				return err, txIndex
+			if len(txLevel) <= 1 {
+				if err, txIndex := toConfirm.confirmWithUnordered(txLevel, execute, confirm); err != nil {
+					// something very wrong, stop the process
+					return err, txIndex
+				}
+				if err := afterParallelConfirm(trunks, toConfirm); err != nil {
+					log.Error("confirm after parallel merge fail", "err", err)
+					return err, 0
+				}
+			} else {
+				if err, txIndex := toConfirm.confirmParallel(trunks, confirm, afterParallelConfirm); err != nil {
+					return err, txIndex
+				}
 			}
 		} else if unorderedMerge {
 			if err, txIndex := toConfirm.confirmWithUnordered(txLevel, execute, confirm); err != nil {
